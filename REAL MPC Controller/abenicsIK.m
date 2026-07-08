@@ -28,12 +28,8 @@ function theta_ref = abenicsIK(q_des, params)
               'q_des must be a 3x1 vector: [roll; pitch; yaw].');
     end
 
-    if ~isfield(params, 'beta')
-        error('abenicsIK:MissingBeta', ...
-              ['params.beta is required. ', ...
-               'beta is the ABENICS paper angle formed by the two driving modules.']);
-    end
-
+    
+ 
 
     %ryan - converts the inputs into non vector varaibles
     % -----------------------------
@@ -46,6 +42,11 @@ function theta_ref = abenicsIK(q_des, params)
     y = q_des(3);   % yaw about world Z, radians
 
     beta = params.beta;   % paper beta: angle formed by the two driving modules %ryan -  stolen from the params, lwk idk why not just defined where but balright
+
+    if ~isscalar(beta)
+        error('abenicsIK:betaSize', 'beta must be a scalar angle in radians.');
+    end
+
 
     %ryan - random trig bs
     % -----------------------------
@@ -198,9 +199,12 @@ end
 %ryan - what that is
 function angle = localAtan2Safe(num, den, tol)
     if abs(num) < tol && abs(den) < tol
-        angle = 0;
+    warning('abenicsIK:SingularAtan2', ...
+            'atan2 input near [0,0]; angle is not uniquely defined.');
+    angle = 0;
     else
         angle = atan2(num, den);
     end
 end
+
 

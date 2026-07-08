@@ -93,6 +93,8 @@ params.moduleB.name = "B";
 params.moduleA.baseYaw = 0; %IMPORTANT IMPORTANT IMPORTANT change when we figure out the real MP gear orientation and moutning
 params.moduleB.baseYaw = pi/2; %because the mp gears are at 90 deg
 
+params.beta = pi/2;  % angle between driving modules, radians
+
 % -------------------------------------------------------------------------
 % Sensor layout convention
 % -------------------------------------------------------------------------
