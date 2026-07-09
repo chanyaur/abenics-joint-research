@@ -110,7 +110,7 @@ function wire_pid_plant_into_main(mainDir)
     set_param(main, 'Solver',     'ode4');
     set_param(main, 'FixedStep',  'pp.Ts_plant');
     warning(['Parent solver set to fixed-step ode4 (step = pp.Ts_plant). ' ...
-             'Run params_pid_plant before simulating so pp resolves.']);
+             'Run params_abenics_coordinate before simulating so pp resolves.']);
 
     Simulink.BlockDiagram.arrangeSystem(main);
     save_system(main);
