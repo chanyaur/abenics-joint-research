@@ -199,8 +199,8 @@ end
 %ryan - what that is
 function angle = localAtan2Safe(num, den, tol)
     if abs(num) < tol && abs(den) < tol
-    warning('abenicsIK:SingularAtan2', ...
-            'atan2 input near [0,0]; angle is not uniquely defined.');
+    %warning('abenicsIK:SingularAtan2', ...
+           % 'atan2 input near [0,0]; angle is not uniquely defined.');
     angle = 0;
     else
         angle = atan2(num, den);
