@@ -5,8 +5,8 @@ function build_abenics_pid_plant()
 % This script is the SOURCE OF TRUTH for the referenced model. The .slx is a
 % regenerable build artifact -- if it ever conflicts in git, just re-run this.
 %
-% Model interface (code convention; see params_abenics.m for the naming
-% caveat vs the hand-drawn diagram):
+% Model interface (code convention; see params_abenics_coordinate.m for the
+% naming caveat vs the hand-drawn diagram):
 %   Inport  theta_des     4x1  safe target motor angles (drawing's "q_des")
 %   Outport theta_actual  4x1  actual motor angles      (drawing's "q_actual")
 %
@@ -30,8 +30,9 @@ function build_abenics_pid_plant()
 %   - Torque saturation is the PID block's own output limit (with anti-windup),
 %     not a separate downstream Saturation, so the integrator cannot wind up.
 %
-% Run params_abenics first (this script also wires it as the model PreLoadFcn
-% so 'pp' resolves from the base workspace whenever the model is opened/run).
+% Run params_abenics_coordinate first (this script also wires it as the model
+% PreLoadFcn so 'pp' resolves from the base workspace whenever the model is
+% opened/run).
 
     mdl = 'abenics_pid_plant';
     here = fileparts(mfilename('fullpath'));
@@ -40,7 +41,7 @@ function build_abenics_pid_plant()
     % Make sure params exist now (build-time expressions like 'pp.Kp' are only
     % evaluated at compile/sim time, but we validate presence early for clarity).
     if evalin('base', "exist('pp','var')") ~= 1
-        evalin('base', 'params_abenics;');
+        evalin('base', 'params_abenics_coordinate;');
     end
 
     % ---- fresh start -----------------------------------------------------
@@ -83,7 +84,7 @@ function build_abenics_pid_plant()
     set_param(mdl, 'FixedStep',  'pp.Ts_plant');    % fast plant sub-step (1e-3 s)
     set_param(mdl, 'StopTime',   '10');
     % load params automatically whenever the model is opened / referenced
-    set_param(mdl, 'PreLoadFcn', 'params_abenics;');
+    set_param(mdl, 'PreLoadFcn', 'params_abenics_coordinate;');
 
     % =====================================================================
     % LAYOUT + SAVE
