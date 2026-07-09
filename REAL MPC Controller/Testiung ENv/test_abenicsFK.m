@@ -1,9 +1,9 @@
 clear; clc;
 
-if exist('params_abenics_coordinate.m', 'file') == 2
-    run('params_abenics_coordinate.m');
+if exist('params_abenics.m', 'file') == 2
+    run('params_abenics.m');
 else
-    error('Cannot find params_abenics_coordinate.m in the current MATLAB folder.');
+    error('Cannot find params_abenics.m in the current MATLAB folder.');
 end
 
 if ~isfield(params, 'beta')

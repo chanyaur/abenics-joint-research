@@ -3,14 +3,14 @@ clear; clc;
 % ------------------------------------------------------------
 % Load ABENICS coordinate parameters
 % ------------------------------------------------------------
-if exist('params_abenics_coordinate.m', 'file') ~= 2
-    error('Cannot find params_abenics_coordinate.m in the current MATLAB folder.');
+if exist('params_abenics.m', 'file') ~= 2
+    error('Cannot find params_abenics.m in the current MATLAB folder.');
 end
 
-run('params_abenics_coordinate.m');
+run('params_abenics.m');
 
 if ~exist('params', 'var')
-    error('params_abenics_coordinate.m must create a variable named params.');
+    error('params_abenics.m must create a variable named params.');
 end
 
 % ------------------------------------------------------------

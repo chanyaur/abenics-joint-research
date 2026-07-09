@@ -8,7 +8,7 @@
 %   4. Accel (soft check) : finite-difference acceleration vs pp.alpha_max.
 %
 % Mirrors the print-heavy style of REAL MPC Controller/Testiung ENv/.
-% Run from the 'REAL MPC Controller' folder (needs params_pid_plant.m,
+% Run from the 'REAL MPC Controller' folder (needs params_abenics.m,
 % build_abenics_pid_plant.m on the path).
 
 clear; clc;
@@ -16,7 +16,7 @@ clear; clc;
 mdl = 'abenics_pid_plant';
 
 % ---- params + model --------------------------------------------------------
-params_pid_plant;                 % defines pp in this workspace
+params_abenics;                   % defines params + pp in this workspace
 assignin('base', 'pp', pp);       % ensure model expressions ('pp.Kp'...) resolve
 
 if exist([mdl '.slx'], 'file') ~= 4 && ~bdIsLoadedLocal(mdl)

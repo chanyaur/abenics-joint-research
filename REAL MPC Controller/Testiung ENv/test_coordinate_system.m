@@ -13,7 +13,7 @@ clear; clc;
 % -------------------------------------------------------------------------
 % Load coordinate parameters
 % -------------------------------------------------------------------------
-run("params_abenics_coordinate.m");
+run("params_abenics.m");
 
 fprintf("ABENICS Coordinate System Test\n");
 fprintf("==============================\n\n");
