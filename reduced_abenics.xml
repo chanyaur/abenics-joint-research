@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<SimscapeMultibodyImportXML version="2.0" xmlns="urn:mathworks:SimscapeMultibody:import" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Created by="Chanya Methaprayoon" from="Onshape" on="07/09/26||16:08:10" using="Simscape Multibody Exporter"/>
+  <ModelUnits length="millimeter" mass="kilogram"/>
+  <DataUnits length="meter" mass="kilogram"/>
+  <RootAssembly name="reduced_abenics" uid="aa0fa25ba294bba31638373e" version="w-e2649045f01955f33f0738ba">
+    <InstanceTree>
+      <Instance entityUid="JFD*:*931e657084ab462056a5241a" name="abenics-cs-gear-36tmod2 v1 v1 &lt;2>" uid="MLk2P/9LbPUthuxDl">
+        <Transform>
+          <Rotation>-0.000000000 -1.000000000 0.000000000 -0.000000000 -0.000000000 -1.000000000 1.000000000 0.000000000 -0.000000000 </Rotation>
+          <Translation>0.000000001 0.000000000 -0.000000002 </Translation>
+        </Transform>
+      </Instance>
+      <Instance entityUid="JFD*:*1d139df5e1a184712d9b5a65" name="abenics-cs-gear-housing-36tmod2-type-B v3 v1 &lt;2>" uid="MQUpWqeVP0QgBnOcM">
+        <Transform>
+          <Rotation>-0.000000000 0.000000000 1.000000000 -0.000000000 -1.000000000 0.000000000 1.000000000 0.000000000 0.000000000 </Rotation>
+          <Translation>-0.058500000 0.097750000 -0.039250000 </Translation>
+        </Transform>
+      </Instance>
+      <Instance entityUid="JFD*:*931e657084ab462056a5241a" name="abenics-cs-gear-36tmod2 v1 v1 &lt;1>" uid="MX806kLB4MmYjMNAr">
+        <Transform>
+          <Rotation>-0.000000000 1.000000000 -0.000000000 -0.000000000 -0.000000000 1.000000000 1.000000000 0.000000000 0.000000000 </Rotation>
+          <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+        </Transform>
+      </Instance>
+      <Instance entityUid="d78ba10e8f2d7f32e175cf5d" name="Monopole Drive Assembly &lt;1>" uid="Mtm9igLodd2bt+P4Q">
+        <Transform>
+          <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+          <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+        </Transform>
+        <Instance entityUid="JFD*:*b61cef4369178d91ed1b126f" name="abenics-monopole-housing v11 v1 &lt;1>" uid="MYZrTCDnAA/uHTtWP">
+          <Transform>
+            <Rotation>-0.000000000 -0.000000000 1.000000000 0.000000000 1.000000000 0.000000000 -1.000000000 0.000000000 -0.000000000 </Rotation>
+            <Translation>-0.000000000 0.048861400 -0.025000000 </Translation>
+          </Transform>
+        </Instance>
+        <Instance entityUid="JFH*:*b61cef4369178d91ed1b126f" name="abenics-monopole-housing v11 v1 &lt;2>" uid="MYuYMBtlU2jRATBsS">
+          <Transform>
+            <Rotation>0.000000000 -0.000000000 -1.000000000 -0.000000000 1.000000000 -0.000000000 1.000000000 0.000000000 0.000000000 </Rotation>
+            <Translation>-0.000000000 0.048861400 -0.025000000 </Translation>
+          </Transform>
+        </Instance>
+        <Instance entityUid="JFD*:*05923f110231613922978ace" name="abenics-monopole-gear-18tmod2 v8 v1 &lt;1>" uid="MkLQX4jyCKVqatGBi">
+          <Transform>
+            <Rotation>-0.000000000 0.000000000 1.000000000 0.130963566 0.991387182 0.000000000 -0.991387182 0.130963566 -0.000000000 </Rotation>
+            <Translation>-0.000000000 -0.018108530 -0.008870196 </Translation>
+          </Transform>
+        </Instance>
+      </Instance>
+      <Instance entityUid="JFD*:*1d139df5e1a184712d9b5a65" name="abenics-cs-gear-housing-36tmod2-type-B v3 v1 &lt;1>" uid="MvI4CZFM2mJp6wDOZ">
+        <Transform>
+          <Rotation>-0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 -1.000000000 0.000000000 -0.000000000 </Rotation>
+          <Translation>-0.097750000 0.058500000 0.039250000 </Translation>
+        </Transform>
+      </Instance>
+      <Instance entityUid="d78ba10e8f2d7f32e175cf5d" name="Monopole Drive Assembly &lt;3>" uid="MzA06+i8merkuKerW">
+        <Transform>
+          <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+          <Translation>-0.107201140 -0.063100203 0.124144267 </Translation>
+        </Transform>
+        <Instance entityUid="JFD*:*b61cef4369178d91ed1b126f" name="abenics-monopole-housing v11 v1 &lt;1>" uid="MYZrTCDnAA/uHTtWP">
+          <Transform>
+            <Rotation>0.000000000 -1.000000000 -0.000000000 -0.000000000 -0.000000000 1.000000000 -1.000000000 -0.000000000 -0.000000000 </Rotation>
+            <Translation>0.058339740 0.063100203 -0.149144267 </Translation>
+          </Transform>
+        </Instance>
+        <Instance entityUid="JFH*:*b61cef4369178d91ed1b126f" name="abenics-monopole-housing v11 v1 &lt;2>" uid="MYuYMBtlU2jRATBsS">
+          <Transform>
+            <Rotation>-0.000000000 -1.000000000 0.000000000 -0.000000000 -0.000000000 -1.000000000 1.000000000 -0.000000000 0.000000000 </Rotation>
+            <Translation>0.058339740 0.063100203 -0.149144267 </Translation>
+          </Transform>
+        </Instance>
+        <Instance entityUid="JFD*:*05923f110231613922978ace" name="abenics-monopole-gear-18tmod2 v8 v1 &lt;1>" uid="MkLQX4jyCKVqatGBi">
+          <Transform>
+            <Rotation>0.081261917 0.996692782 -0.000000000 -0.000000000 0.000000000 1.000000000 0.996692782 -0.081261917 -0.000000000 </Rotation>
+            <Translation>-0.008989761 0.063100203 -0.118631533 </Translation>
+          </Transform>
+        </Instance>
+      </Instance>
+    </InstanceTree>
+    <Constraints/>
+    <Joints>
+      <Weld name="Fastened1">
+        <BaseFrame>
+          <InstancePath>
+            <Uid>MvI4CZFM2mJp6wDOZ</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>-1.000000000 0.000000000 -0.000000000 -0.000000000 0.707106781 0.707106781 0.000000000 0.707106781 -0.707106781 </Rotation>
+            <Translation>0.039250000 0.042242118 0.002992118 </Translation>
+          </Transform>
+        </BaseFrame>
+        <FollowerFrame>
+          <InstancePath>
+            <Uid>MQUpWqeVP0QgBnOcM</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 0.707106781 -0.707106781 -0.000000000 0.707106781 0.707106781 </Rotation>
+            <Translation>0.039250000 0.042242118 0.002992118 </Translation>
+          </Transform>
+        </FollowerFrame>
+      </Weld>
+      <Weld name="Fastened2">
+        <BaseFrame>
+          <InstancePath/>
+          <Transform>
+            <Rotation>0.000000000 0.707106781 0.707106781 0.000000000 0.707106781 -0.707106781 -1.000000000 0.000000000 0.000000000 </Rotation>
+            <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+          </Transform>
+        </BaseFrame>
+        <FollowerFrame>
+          <InstancePath>
+            <Uid>MvI4CZFM2mJp6wDOZ</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 0.000000000 0.000000000 -0.000000000 0.707106781 0.707106781 -0.000000000 -0.707106781 0.707106781 </Rotation>
+            <Translation>0.039250000 0.097750000 0.058500000 </Translation>
+          </Transform>
+        </FollowerFrame>
+      </Weld>
+      <Weld name="Fastened3">
+        <BaseFrame>
+          <InstancePath>
+            <Uid>MX806kLB4MmYjMNAr</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 -0.000000000 -0.000000000 0.000000000 1.000000000 -0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+            <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+          </Transform>
+        </BaseFrame>
+        <FollowerFrame>
+          <InstancePath>
+            <Uid>MLk2P/9LbPUthuxDl</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+            <Translation>0.000000002 0.000000001 0.000000000 </Translation>
+          </Transform>
+        </FollowerFrame>
+      </Weld>
+      <Spherical name="Ball1">
+        <BaseFrame>
+          <InstancePath>
+            <Uid>MvI4CZFM2mJp6wDOZ</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>-1.000000000 0.000000000 0.000000000 -0.000000000 -0.707106781 -0.707106781 0.000000000 -0.707106781 0.707106781 </Rotation>
+            <Translation>0.039250000 0.097750000 0.058500000 </Translation>
+          </Transform>
+        </BaseFrame>
+        <FollowerFrame>
+          <InstancePath>
+            <Uid>MX806kLB4MmYjMNAr</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+            <Translation>0.000000000 0.000000000 0.000000000 </Translation>
+          </Transform>
+        </FollowerFrame>
+      </Spherical>
+      <Revolute name="Revolute1">
+        <BaseFrame>
+          <InstancePath>
+            <Uid>MvI4CZFM2mJp6wDOZ</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 -0.000000000 -0.000000000 0.000000000 1.000000000 -0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+            <Translation>0.039250000 0.097750000 -0.020361400 </Translation>
+          </Transform>
+        </BaseFrame>
+        <FollowerFrame>
+          <InstancePath>
+            <Uid>Mtm9igLodd2bt+P4Q</Uid>
+            <Uid>MYZrTCDnAA/uHTtWP</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -0.000000000 -1.000000000 0.000000000 1.000000000 -0.000000000 </Rotation>
+            <Translation>-0.025000000 0.030000000 0.000000000 </Translation>
+          </Transform>
+        </FollowerFrame>
+      </Revolute>
+      <Revolute name="Revolute2">
+        <BaseFrame>
+          <InstancePath>
+            <Uid>MQUpWqeVP0QgBnOcM</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 -0.000000000 -0.000000000 0.000000000 1.000000000 -0.000000000 0.000000000 0.000000000 1.000000000 </Rotation>
+            <Translation>0.039250000 0.097750000 -0.020361400 </Translation>
+          </Transform>
+        </BaseFrame>
+        <FollowerFrame>
+          <InstancePath>
+            <Uid>MzA06+i8merkuKerW</Uid>
+            <Uid>MYuYMBtlU2jRATBsS</Uid>
+          </InstancePath>
+          <Transform>
+            <Rotation>1.000000000 0.000000000 -0.000000000 -0.000000000 -0.000000000 -1.000000000 -0.000000000 1.000000000 -0.000000000 </Rotation>
+            <Translation>0.025000000 0.030000000 0.000000000 </Translation>
+          </Transform>
+        </FollowerFrame>
+      </Revolute>
+    </Joints>
+  </RootAssembly>
+  <Assemblies>
+    <Assembly name="Monopole Drive Assembly" uid="d78ba10e8f2d7f32e175cf5d">
+      <ModelUnits length="millimeter" mass="kilogram"/>
+      <Constraints/>
+      <Joints>
+        <Weld name="Fastened1">
+          <BaseFrame>
+            <InstancePath>
+              <Uid>MYZrTCDnAA/uHTtWP</Uid>
+            </InstancePath>
+            <Transform>
+              <Rotation>-1.000000000 0.000000000 0.000000000 -0.000000000 -1.000000000 -0.000000000 0.000000000 -0.000000000 1.000000000 </Rotation>
+              <Translation>-0.025000000 0.045811819 0.000000000 </Translation>
+            </Transform>
+          </BaseFrame>
+          <FollowerFrame>
+            <InstancePath>
+              <Uid>MYuYMBtlU2jRATBsS</Uid>
+            </InstancePath>
+            <Transform>
+              <Rotation>1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+              <Translation>0.025000000 0.045811819 0.000000000 </Translation>
+            </Transform>
+          </FollowerFrame>
+        </Weld>
+        <Revolute name="Revolute3_MNNPYAW">
+          <BaseFrame>
+            <InstancePath>
+              <Uid>MYuYMBtlU2jRATBsS</Uid>
+            </InstancePath>
+            <Transform>
+              <Rotation>-1.000000000 0.000000000 -0.000000000 -0.000000000 -1.000000000 -0.000000000 -0.000000000 0.000000000 1.000000000 </Rotation>
+              <Translation>0.025000000 0.000000000 0.013000000 </Translation>
+            </Transform>
+          </BaseFrame>
+          <FollowerFrame>
+            <InstancePath>
+              <Uid>MkLQX4jyCKVqatGBi</Uid>
+            </InstancePath>
+            <Transform>
+              <Rotation>0.994521895 0.104528463 0.000000000 0.104528463 -0.994521895 0.000000000 0.000000000 0.000000000 -1.000000000 </Rotation>
+              <Translation>-0.000023178 0.067554802 -0.013000000 </Translation>
+            </Transform>
+          </FollowerFrame>
+        </Revolute>
+      </Joints>
+    </Assembly>
+  </Assemblies>
+  <Parts>
+    <Part name="abenics-monopole-gear-18tmod2 v8 v1" uid="JFD*:*05923f110231613922978ace">
+      <ModelUnits length="millimeter" mass="kilogram"/>
+      <MassProperties>
+        <Mass>0.0175541668</Mass>
+        <CenterOfMass>-0.000000083 0.067537961 0.000000039 </CenterOfMass>
+        <Inertia>0.000002521 0.000002509 0.000003207 0.000000000 0.000000000 -0.000000000 </Inertia>
+      </MassProperties>
+      <GeometryFile name="abenics-monopole-gear-18tmod2 v8 v11.step" type="STEP"/>
+      <VisualProperties>
+        <Ambient a="1.000000000" b="0.000000000" g="0.000000000" r="1.000000000"/>
+        <Diffuse a="1.000000000" b="0.000000000" g="0.000000000" r="1.000000000"/>
+        <Specular a="1.000000000" b="0.000000000" g="0.000000000" r="1.000000000"/>
+        <Emissive a="1" b="0" g="0" r="0"/>
+        <Shininess>0.5</Shininess>
+      </VisualProperties>
+    </Part>
+    <Part name="abenics-cs-gear-housing-36tmod2-type-B v3 v1" uid="JFD*:*1d139df5e1a184712d9b5a65">
+      <ModelUnits length="millimeter" mass="kilogram"/>
+      <MassProperties>
+        <Mass>0.30375229</Mass>
+        <CenterOfMass>0.039248939 0.105837180 0.021304707 </CenterOfMass>
+        <Inertia>0.000312769 0.000340964 0.000530359 -0.000036744 -0.000000002 0.000000005 </Inertia>
+      </MassProperties>
+      <GeometryFile name="abenics-cs-gear-housing-36tmod2-type-B v3 v11.step" type="STEP"/>
+      <VisualProperties>
+        <Ambient a="1.000000000" b="0.811764706" g="0.878431373" r="0.901960784"/>
+        <Diffuse a="1.000000000" b="0.811764706" g="0.878431373" r="0.901960784"/>
+        <Specular a="1.000000000" b="0.811764706" g="0.878431373" r="0.901960784"/>
+        <Emissive a="1" b="0" g="0" r="0"/>
+        <Shininess>0.5</Shininess>
+      </VisualProperties>
+    </Part>
+    <Part name="abenics-cs-gear-36tmod2 v1 v1" uid="JFD*:*931e657084ab462056a5241a">
+      <ModelUnits length="millimeter" mass="kilogram"/>
+      <MassProperties>
+        <Mass>0.0744983779</Mass>
+        <CenterOfMass>0.000000016 0.000000414 0.011391518 </CenterOfMass>
+        <Inertia>0.000018984 0.000018984 0.000029402 0.000000000 -0.000000000 0.000000000 </Inertia>
+      </MassProperties>
+      <GeometryFile name="abenics-cs-gear-36tmod2 v1 v11.step" type="STEP"/>
+      <VisualProperties>
+        <Ambient a="1.000000000" b="0.866666667" g="0.756862745" r="0.850980392"/>
+        <Diffuse a="1.000000000" b="0.866666667" g="0.756862745" r="0.850980392"/>
+        <Specular a="1.000000000" b="0.866666667" g="0.756862745" r="0.850980392"/>
+        <Emissive a="1" b="0" g="0" r="0"/>
+        <Shininess>0.5</Shininess>
+      </VisualProperties>
+    </Part>
+    <Part name="abenics-monopole-housing v11 v1" uid="JFD*:*b61cef4369178d91ed1b126f">
+      <ModelUnits length="millimeter" mass="kilogram"/>
+      <MassProperties>
+        <Mass>0.00914015384</Mass>
+        <CenterOfMass>-0.025448568 0.026850912 0.008075890 </CenterOfMass>
+        <Inertia>0.000002209 0.000001089 0.000002703 0.000000381 -0.000000019 -0.000000004 </Inertia>
+      </MassProperties>
+      <GeometryFile name="abenics-monopole-housing v11 v12.step" type="STEP"/>
+      <VisualProperties>
+        <Ambient a="1.000000000" b="0.627450980" g="0.627450980" r="0.627450980"/>
+        <Diffuse a="1.000000000" b="0.627450980" g="0.627450980" r="0.627450980"/>
+        <Specular a="1.000000000" b="0.627450980" g="0.627450980" r="0.627450980"/>
+        <Emissive a="1" b="0" g="0" r="0"/>
+        <Shininess>0.5</Shininess>
+      </VisualProperties>
+    </Part>
+    <Part name="abenics-monopole-housing v11 v1" uid="JFH*:*b61cef4369178d91ed1b126f">
+      <ModelUnits length="millimeter" mass="kilogram"/>
+      <MassProperties>
+        <Mass>0.00913806408</Mass>
+        <CenterOfMass>0.025448522 0.026836586 0.008147143 </CenterOfMass>
+        <Inertia>0.000002198 0.000001084 0.000002698 0.000000365 0.000000020 0.000000004 </Inertia>
+      </MassProperties>
+      <GeometryFile name="abenics-monopole-housing v11 v13.step" type="STEP"/>
+      <VisualProperties>
+        <Ambient a="1.000000000" b="0.627450980" g="0.627450980" r="0.627450980"/>
+        <Diffuse a="1.000000000" b="0.627450980" g="0.627450980" r="0.627450980"/>
+        <Specular a="1.000000000" b="0.627450980" g="0.627450980" r="0.627450980"/>
+        <Emissive a="1" b="0" g="0" r="0"/>
+        <Shininess>0.5</Shininess>
+      </VisualProperties>
+    </Part>
+  </Parts>
+</SimscapeMultibodyImportXML>
