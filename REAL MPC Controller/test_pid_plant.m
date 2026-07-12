@@ -28,28 +28,59 @@ fprintf('\n=== test_pid_plant ===\n');
 nPass = 0; nFail = 0;
 
 % ===========================================================================
-% 1) STEP TRACKING
+% 1) SINE TRACKING  (drive each coordinate with a sine wave for PD tuning)
 % ===========================================================================
-Tstop  = 3.0;
-tstep  = 0.1;
-target = [0.30; -0.50; 0.20; 0.40];      % rad, one per motor
+Tstop = 3.0;
+freq  = [0.5;  0.5;  0.5;  0.5];         % Hz, one per motor
+amp   = [0.30; 0.50; 0.20; 0.40];        % rad amplitude, one per motor
 
 tt = (0:pp.Ts_plant:Tstop)';
-U  = repmat(target', numel(tt), 1);
-U(tt < tstep, :) = 0;
+U  = amp(:)' .* sin(2*pi * tt * freq(:)');   % Nx4 sine references
 
 [t, y] = runModel(mdl, [tt U], Tstop);
 
-yfinal = mean(y(t >= Tstop-0.2, :), 1)';        % avg over last 0.2 s
-errFinal = yfinal - target;
-tolTrack = 5e-2;                                 % rad (placeholder gains)
+% tracking error over the whole run (desired interpolated onto output time)
+Uref    = interp1(tt, U, t);
+trkRMS  = sqrt(mean((y - Uref).^2, 1))';       % RMS tracking error per motor
+tolTrack = 5e-2;                                % rad (loosen/tighten as you tune)
 
-fprintf('\n[1] Step tracking\n');
-fprintf('    target      = [% .3f % .3f % .3f % .3f]\n', target);
-fprintf('    theta_final = [% .3f % .3f % .3f % .3f]\n', yfinal);
-fprintf('    |error|     = [% .4f % .4f % .4f % .4f] rad\n', abs(errFinal));
-[nPass, nFail] = check(all(abs(errFinal) < tolTrack), ...
-    sprintf('steady-state |error| < %.3g rad', tolTrack), nPass, nFail);
+fprintf('\n[1] Sine tracking\n');
+fprintf('    freq        = [% .2f % .2f % .2f % .2f] Hz\n', freq);
+fprintf('    amp         = [% .3f % .3f % .3f % .3f] rad\n', amp);
+fprintf('    RMS error   = [% .4f % .4f % .4f % .4f] rad\n', trkRMS);
+[nPass, nFail] = check(all(trkRMS < tolTrack), ...
+    sprintf('RMS tracking error < %.3g rad', tolTrack), nPass, nFail);
+
+% ---- RIPPLE DIAGNOSTIC: dominant frequency of the residual (motor 1) ------
+% Subtract the smooth desired to isolate the buzz, FFT it, report the peak.
+res = y(:,1) - Uref(:,1);
+res = res - mean(res);
+Fs  = 1 / mean(diff(t));                 % sample rate of the sim output
+P   = abs(fft(res));
+f   = (0:numel(res)-1)' * (Fs / numel(res));
+half = f <= Fs/2;
+band = half & (f > 2);                   % ignore < 2 Hz (that's the tracking lag)
+[~, k] = max(P .* band);
+fprintf('    ripple: dominant residual freq (motor 1) = %.1f Hz  (Ts_plant=%.4g s -> %.0f Hz solver)\n', ...
+        f(k), pp.Ts_plant, 1/pp.Ts_plant);
+
+% ---- PLOT: q_desired vs time  and  q_actual vs time  (for PD tuning) ------
+figure('Name', 'PD tuning', 'Color', 'w');
+
+subplot(2, 1, 1);
+plot(tt, U, 'LineWidth', 1.5); grid on;
+xlabel('t [s]'); ylabel('q_{desired} [rad]');
+title('q_{desired} vs time');
+legend({'q_1', 'q_2', 'q_3', 'q_4'}, 'Location', 'best');
+
+subplot(2, 1, 2);
+plot(t, y, 'LineWidth', 1.5); grid on;
+xlabel('t [s]'); ylabel('q_{actual} [rad]');
+title('q_{actual} vs time');
+legend({'q_1', 'q_2', 'q_3', 'q_4'}, 'Location', 'best');
+
+sgtitle(sprintf('Kp=%s  Kd=%s  N=%g  omega\\_eps=%g  backlash=%g', ...
+    mat2str(pp.Kp(:)'), mat2str(pp.Kd(:)'), pp.N(1), pp.omega_eps, pp.backlash(1)));
 
 % ===========================================================================
 % 2) BOUNDEDNESS
