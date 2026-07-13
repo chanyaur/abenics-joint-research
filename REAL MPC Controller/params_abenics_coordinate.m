@@ -181,9 +181,9 @@ pp.Ts_plant = 1e-3;         % fast plant sub-step for the continuous dynamics (s
 % -------------------------------------------------------------------------
 % PID controller (per motor).  Output = torque command (N*m).
 % -------------------------------------------------------------------------
-pp.Kp = [2; 2; 2; 2];   % TUNE proportional gain
-pp.Ki = [0;    0;    0;    0];      % (unused: controller is PD)
-pp.Kd = [0.05; 0.05; 0.05; 0.05];   % TUNE derivative gain
+pp.Kp = [2.0;  2.0;  2.0;  2.0];    % TUNE proportional gain
+pp.Ki = [1.0;  1.0;  1.0;  1.0];    % TUNE integral gain
+pp.Kd = [0.10; 0.10; 0.10; 0.10];   % TUNE derivative gain
 pp.N  = [100;  100;  100;  100];    % derivative filter coefficient (rad/s)
 
 pp.tau_max = [1.0; 1.0; 1.0; 1.0];  % TUNE torque saturation / motor effort limit (N*m)
@@ -206,13 +206,13 @@ pp.tau_e = [5.0e-3; 5.0e-3; 5.0e-3; 5.0e-3];% TUNE motor torque lag time constan
 pp.alpha_max = [500; 500; 500; 500];        % TUNE acceleration limit (rad/s^2)
 pp.omega_max = [50;  50;  50;  50];         % TUNE velocity limit (rad/s)
 
-pp.backlash  = [0; 0; 0; 0]; % TUNE backlash dead-band WIDTH (rad)
+pp.backlash  = [1.0e-3; 1.0e-3; 1.0e-3; 1.0e-3]; % TUNE backlash dead-band WIDTH (rad)
 
 pp.load      = [0; 0; 0; 0];                % constant external load torque (N*m), 0 for now
 
 % Smoothing constant for the Coulomb friction tanh() so it stays differentiable
 % for the ODE solver (small -> closer to ideal sign()).
-pp.omega_eps = 1e-1;                        % rad/s  (raised: 1e-3 caused stick-slip chatter)
+pp.omega_eps = 1e-3;                        % rad/s
 
 % -------------------------------------------------------------------------
 % Initial conditions
