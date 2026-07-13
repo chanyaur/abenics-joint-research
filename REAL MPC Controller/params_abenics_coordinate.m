@@ -1,5 +1,5 @@
 % =========================================================================
-% params_abenics.m
+% params_abenics_coordinate.m
 %
 % Single parameter file for the ABENICS orientation-state MPC project.
 % Replaces params_abenics_coordinate.m + params_pid_plant.m.
@@ -284,8 +284,20 @@ params.singularity.dangerDistance  = deg2rad(1);  % rad
 % -----------------------------
 % MPC sample time and horizon
 % -----------------------------
-params.mpc.Np = 20;               % 20-step prediction horizon
-params.mpc.maxQStep = deg2rad(2); % max q_des_mpc movement per MPC step
+params.mpc.Np = 10;               % 20-step prediction horizon
+params.mpc.Nc = 5;
+params.mpc.maxQStep = deg2rad([2; 0; 0]); % max q_des_mpc movement per MPC step
+
+% -----------------------------
+% fmincon solver settings
+% -----------------------------
+params.mpc.maxIterations = 15;
+params.mpc.maxFunctionEvaluations = 2000;
+params.mpc.constraintTolerance = 1e-6;
+params.mpc.optimalityTolerance = 1e-4;
+params.mpc.stepTolerance = 1e-6;
+
+params.mpc.recoveryClearDistance = deg2rad(3);
 
 % -----------------------------
 % CS gear orientation limits
@@ -327,12 +339,108 @@ params.plant.KdPlant = 12;
 % -----------------------------
 % MPC cost weights
 % -----------------------------
-params.mpc.wTrack       = 100;    % follow q_ref during the horizon
-params.mpc.wTerminal    = 300;    % end the horizon close to q_ref
-params.mpc.wSmooth      = 10;     % avoid jumpy q_des_mpc commands
-params.mpc.wMotor       = 5;      % avoid huge IK motor jumps
+params.mpc.wTrack       = 2000;    % follow q_ref during the horizon
+params.mpc.wTerminal    = 1000;    % end the horizon close to q_ref
+params.mpc.wSmooth      = 1000;     % avoid jumpy q_des_mpc commands
+params.mpc.wMotor       = 100;      % avoid huge IK motor jumps
 params.mpc.wSingularity = 1000;   % strongly avoid singularity warning zone
 params.mpc.wOmega       = 0.5;    % avoid excessive predicted motor velocity
+
+% recovery response added by Ryan
+params.mpc.recoveryMaxQStep = deg2rad(0.25); % prevents intense overshoot in the recovery response from singularity
+% Unsafe-target override
+params.mpc.allowSingularTarget = false;
+
+% Print one MATLAB warning when override becomes active
+params.mpc.emitSingularTargetWarning = true;
+
+params.mpc.disableRecoveryForSingularTarget = false;
+
+% -----------------------------
+% Geometry-aware multi-start detour MPC
+% Initial tuning values; not yet physically validated.
+% -----------------------------
+params.mpc.enableDetourMultistart = true;
+
+% Arm geometry-aware starts when a nominal prediction enters the warning zone.
+params.mpc.detourTriggerDistance = ...
+    params.singularity.warningDistance;
+
+% Commitment can clear only after the direct route remains safely clear for
+% several consecutive updates and the old pole is behind the planned motion.
+params.mpc.detourClearDistance = ...
+    params.singularity.warningDistance;
+params.mpc.detourClearConfirmations = 3;
+
+% First proof uses one clearance and three starts:
+% shifted warm start, positive side, and negative side.
+params.mpc.detourClearances = ...
+    params.singularity.warningDistance;  % 10 deg initial ring clearance
+
+% After a side is committed, the working ring may shrink toward 5 degrees
+% as the measured plant approaches the pole. This leaves enough of the
+% six-move control horizon for actual azimuth progress around the pole.
+params.mpc.detourContinuationClearance = max( ...
+    params.mpc.recoveryClearDistance + deg2rad(2), ...
+    deg2rad(5));
+
+params.mpc.maxDetourStarts = 3;
+
+params.mpc.detourTargetTolerance = deg2rad(1);
+params.mpc.detourReferenceChangeTolerance = deg2rad(5);
+params.mpc.maxDetourFailures = 2;
+
+% Geometry resolution and numerical tolerances used only to construct z0.
+params.mpc.detourAxisSampleStep = deg2rad(0.25);
+params.mpc.detourGeometryTolerance = 1e-10;
+params.mpc.detourObjectiveTieTolerance = 1e-6;
+
+% Densify each rotation segment until every raw Euler increment is below
+% this fraction of maxQStep before Nc-point prefix resampling.
+params.mpc.detourDenseQStepFraction = 0.5;
+
+% During a blocked route, a safe boundary-stall solution is retained only as
+% a backup. Primary route candidates must make at least this much azimuth
+% progress around the selected signed pole.
+params.mpc.detourMinimumOptimizedProgress = deg2rad(0.5);
+
+
+% V5 route execution uses physical tangent-plane displacement, not azimuth.
+% A detour can only claim tangential progress while the predicted tracked
+% axis remains at least this far from the selected pole.
+params.mpc.detourProgressMinimumClearance = ...
+    params.mpc.detourContinuationClearance;  % 5 deg
+
+% Check the first applied command and the third predicted plant step.
+params.mpc.detourNearTermCommandCount = 3;
+
+% Physical tracked-axis displacement requirements in the pole tangent plane.
+% These are deliberately smaller than the old azimuth thresholds because the
+% physical displacement includes the detour-ring radius.
+params.mpc.detourFirstTangentialDisplacement = deg2rad(0.02);
+params.mpc.detourNearTermTangentialDisplacement = deg2rad(0.08);
+
+% If the plant is already inside the progress-clearance ring, require monotonic
+% outward motion before tangential progress can qualify.
+params.mpc.detourMinimumOutwardProgress = deg2rad(0.25);
+
+% Sample each actually applied plant transition so a command cannot jump from
+% one safe endpoint to another by crossing through a singular pole.
+params.mpc.transitionSafetySamples = 9;
+
+% Select the free twist about each geometric tracked-axis sample so the IK
+% branch changes continuously. These settings affect initial guesses only.
+params.mpc.detourTwistCoarseCount = 37;
+params.mpc.detourTwistFineCount = 21;
+params.mpc.detourTwistQWeight = 0.05;
+params.mpc.detourTwistAngleWeight = 1e-5;
+
+% If a geometric start violates motor dynamics, blend it toward the shifted
+% warm start while preserving the requested detour side and all pole limits.
+params.mpc.detourSeedBlendScales = ...
+    [1.00; 0.75; 0.50; 0.35; 0.20; 0.10];
+params.mpc.detourMinimumSeedSideProgress = deg2rad(0.5);
+params.mpc.allowInfeasibleDetourSeed = true;
 
 % -----------------------------
 % Candidate detour size
