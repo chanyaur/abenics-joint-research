@@ -210,9 +210,50 @@ pp.backlash  = [1.0e-3; 1.0e-3; 1.0e-3; 1.0e-3]; % TUNE backlash dead-band WIDTH
 
 pp.load      = [0; 0; 0; 0];                % constant external load torque (N*m), 0 for now
 
+% -------------------------------------------------------------------------
+% Tendon preload (semi-active, constant setpoint version)
+% -------------------------------------------------------------------------
+% Represents the steady-state torque delivered by a semi-active antagonistic
+% tendon pair (1 active tensioner + 1 passive spring) at a FIXED tension
+% setpoint. Tensioner actuator dynamics (lag, its own PID loop) are NOT
+% modeled here -- this is the settled output only, added directly into
+% net_torque. Sized to exceed expected disturbance torque so the mechanism
+% stays pinned against one flank of the backlash gap.
+pp.tau_preload = [0; 0; 0; 0];              % TUNE constant tendon preload torque (N*m)
+
 % Smoothing constant for the Coulomb friction tanh() so it stays differentiable
 % for the ODE solver (small -> closer to ideal sign()).
 pp.omega_eps = 1e-3;                        % rad/s
+
+% -------------------------------------------------------------------------
+% Mesh-level (CS-gear / MP-gear) preload and backlash
+% -------------------------------------------------------------------------
+% Separate from the per-motor driving-module backlash above. This acts
+% AFTER forward kinematics (abenicsFK.m), on ball orientation directly --
+% i.e. on q = [roll; pitch; yaw] -- not on any individual motor angle.
+% Represents tendons routed to the CS-gear/output link (per the ABENICS
+% figure), pulling the CS-gear into its mesh with the MP-gears, independent
+% of the 4 driving motors. Per-axis so roll/pitch/yaw can be tuned
+% separately -- yaw is the one flagged in dial-gauge source notes as most
+% affected by gravity-driven backlash near r = +/-90 deg.
+%
+% q_actual is computed from a force balance at the mesh, not an assumed
+% constant offset:
+%
+%   q_bias = clip( (tau_preload_mesh - tau_gravity(q)) / k_mesh , +/- mesh_backlash/2 )
+%   q_actual = backlash( q_pred + q_bias , width = mesh_backlash )
+%
+% tau_gravity(q) is a simple placeholder model of gravity-induced torque on
+% the output link, worst-case near roll = +/-90 deg per dial-gauge source
+% notes (yaw vibration attributed to gravity there):
+%
+%   tau_gravity(q) = tau_gravity_max .* sin(q)   (elementwise, q = [roll;pitch;yaw])
+%
+pp.mesh_backlash    = deg2rad([0.8; 0.8; 0.8]);  % TUNE mesh backlash width, [roll; pitch; yaw] (rad)
+                                                   % source: dial gauge measurement, ~0.8 deg coupling backlash
+pp.tau_preload_mesh = [1; 1; 1];    % TUNE tendon preload torque at the mesh, [roll; pitch; yaw] (N*m)
+pp.tau_gravity_max  = [0.025; 0.025; 0.025];    % TUNE worst-case gravity torque on output link, [roll; pitch; yaw] (N*m)
+pp.k_mesh           = [5; 5; 5];    % TUNE effective mesh contact stiffness, [roll; pitch; yaw] (N*m/rad)
 
 % -------------------------------------------------------------------------
 % Initial conditions
@@ -224,7 +265,7 @@ pp.omega0 = [0; 0; 0; 0];   % initial motor velocities (rad/s)
 % Sanity checks: every per-motor field must be nMotors x 1.
 % -------------------------------------------------------------------------
 perMotorFields = { 'Kp','Ki','Kd','N','tau_max','J','b','Tc','tau_e', ...
-                   'alpha_max','omega_max','backlash','load','theta0','omega0' };
+                   'alpha_max','omega_max','backlash','load','tau_preload','theta0','omega0' };
 for k = 1:numel(perMotorFields)
     f = perMotorFields{k};
     if ~isequal(size(pp.(f)), [pp.nMotors, 1])
@@ -235,6 +276,16 @@ end
 
 fprintf('params_abenics: loaded coordinate conventions + PID/plant params for %d motors, Ts=%.4gs.\n', ...
         pp.nMotors, pp.Ts);
+
+% Mesh-level fields are 3x1 (roll/pitch/yaw), not 4x1 (per-motor) -- checked separately.
+perAxisFields = {'mesh_backlash', 'tau_preload_mesh', 'tau_gravity_max', 'k_mesh'};
+for k = 1:numel(perAxisFields)
+    f = perAxisFields{k};
+    if ~isequal(size(pp.(f)), [3, 1])
+        error('params_abenics:size', ...
+              'pp.%s must be 3x1 ([roll; pitch; yaw]).', f);
+    end
+end
 
 
 % -------------------------------------------------------------------------
