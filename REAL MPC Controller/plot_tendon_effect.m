@@ -1,14 +1,12 @@
 % run and plot tendon effect
 
-for preload_values = [0, 0.0125, 0.025, 0.0375, 0.05]
-
-    clear q_pred_result q_actual_result qpred qactual t   % avoid stale-variable confusion between runs
-    
-    params_abenics_coordinate;   % RELOAD pp (and params) from disk -- must run every time you edit the .m file
-    
-    fprintf('Using pp.tau_preload_mesh = [%.4g; %.4g; %.4g]\n\n', pp.tau_preload_mesh);  % sanity check before simulating
-    
+for preload_values = [0, 0.0125, 0.025, 0.0375, 0.05, 0.075, 1]
+    clear q_pred_result q_actual_result qpred qactual t
+    params_abenics_coordinate;                 % loads baseline pp
+    pp.tau_preload_mesh = preload_values * [1; 1; 1];   % <-- override here, after loading
+    fprintf('Using pp.tau_preload_mesh = [%.4g; %.4g; %.4g]\n\n', pp.tau_preload_mesh);
     out = sim('real_MPC_schema');
+    
     q_pred_result   = out.q_pred;
     q_actual_result = out.q_actual;
     
@@ -31,6 +29,7 @@ for preload_values = [0, 0.0125, 0.025, 0.0375, 0.05]
     title(sprintf('Hysteresis loop, tau\\_preload\\_mesh = %.4g', pp.tau_preload_mesh(axis_idx)));
     loop_area = polyarea(x, y);
     fprintf('loop area: %.6g\n', loop_area);
+    legend(num2str(pp.tau_preload_mesh));
     
     xlim([0.19 0.23]);
     ylim([0.19 0.23]);

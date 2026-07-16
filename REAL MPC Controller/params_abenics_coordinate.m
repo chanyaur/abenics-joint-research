@@ -251,7 +251,7 @@ pp.omega_eps = 1e-3;                        % rad/s
 %
 pp.mesh_backlash    = deg2rad([0.8; 0.8; 0.8]);  % TUNE mesh backlash width, [roll; pitch; yaw] (rad)
                                                    % source: dial gauge measurement, ~0.8 deg coupling backlash
-pp.tau_preload_mesh = [1; 1; 1];    % TUNE tendon preload torque at the mesh, [roll; pitch; yaw] (N*m)
+pp.tau_preload_mesh = [0.01; 0.01; 0.01];    % TUNE tendon preload torque at the mesh, [roll; pitch; yaw] (N*m)
 pp.tau_gravity_max  = [0.025; 0.025; 0.025];    % TUNE worst-case gravity torque on output link, [roll; pitch; yaw] (N*m)
 pp.k_mesh           = [5; 5; 5];    % TUNE effective mesh contact stiffness, [roll; pitch; yaw] (N*m/rad)
 
@@ -498,3 +498,15 @@ params.mpc.allowInfeasibleDetourSeed = true;
 % Used by the sampling-based MPC to generate pitch/yaw detour paths.
 % -----------------------------
 params.mpc.avoidOffset = deg2rad(8);
+
+
+% new struct
+
+meshContact.tau_preload_mesh = pp.tau_preload_mesh;
+meshContact.tau_gravity_max  = pp.tau_gravity_max;
+meshContact.k_mesh           = pp.k_mesh;
+meshContact.mesh_backlash    = pp.mesh_backlash;
+meshContact.J_mesh           = [1e-3; 1e-3; 1e-3];
+meshContact.c_contact        = [0.05; 0.05; 0.05];
+meshContact.c_free           = [0.001; 0.001; 0.001];
+meshContact.Ts           = params.Ts;
