@@ -24,15 +24,6 @@
 % Placeholder numeric values are tagged  % TUNE  -- real system-id values
 % come later.
 % =========================================================================
-%
-% MERGE NOTE:
-%   This version keeps the first file's SO(3) CEM MPC configuration as the
-%   source of truth and adds only the second file's tendon-preload and
-%   mesh-level backlash parameters.
-%
-%   The second file's older fmincon/detour controller settings were NOT
-%   imported.
-% =========================================================================
 
 clear params pp
 
@@ -220,63 +211,49 @@ pp.backlash  = [1.0e-3; 1.0e-3; 1.0e-3; 1.0e-3]; % TUNE backlash dead-band WIDTH
 pp.load      = [0; 0; 0; 0];                % constant external load torque (N*m), 0 for now
 
 % -------------------------------------------------------------------------
-% Tendon preload (semi-active, constant-setpoint approximation)
+% Tendon preload (semi-active, constant setpoint version)
 % -------------------------------------------------------------------------
-% Represents the settled torque delivered by a semi-active antagonistic
-% tendon pair: one active tensioner and one passive spring.
-%
-% This parameter does NOT model tensioner lag or a separate tension-control
-% loop. The plant must explicitly add pp.tau_preload to its motor net-torque
-% equation for this setting to affect simulation.
-%
-% Suggested sign convention in the plant:
-%   net = tau_applied + tau_preload ...
-%         - b.*omega ...
-%         - Tc.*tanh(omega./omega_eps) ...
-%         - load;
-pp.tau_preload = [0; 0; 0; 0];  % TUNE constant preload torque per motor (N*m)
+% Represents the steady-state torque delivered by a semi-active antagonistic
+% tendon pair (1 active tensioner + 1 passive spring) at a FIXED tension
+% setpoint. Tensioner actuator dynamics (lag, its own PID loop) are NOT
+% modeled here -- this is the settled output only, added directly into
+% net_torque. Sized to exceed expected disturbance torque so the mechanism
+% stays pinned against one flank of the backlash gap.
+pp.tau_preload = [0; 0; 0; 0];              % TUNE constant tendon preload torque (N*m)
 
 % Smoothing constant for the Coulomb friction tanh() so it stays differentiable
 % for the ODE solver (small -> closer to ideal sign()).
 pp.omega_eps = 1e-3;                        % rad/s
 
 % -------------------------------------------------------------------------
-% Mesh-level CS-gear / MP-gear preload and backlash
+% Mesh-level (CS-gear / MP-gear) preload and backlash
 % -------------------------------------------------------------------------
-% This is separate from the four per-motor driving-module backlash values.
-% It represents backlash at the final CS/MP gear mesh after forward
-% kinematics. The current project FK filename is abenicsFL.m.
+% Separate from the per-motor driving-module backlash above. This acts
+% AFTER forward kinematics (abenicsFK.m), on ball orientation directly --
+% i.e. on q = [roll; pitch; yaw] -- not on any individual motor angle.
+% Represents tendons routed to the CS-gear/output link (per the ABENICS
+% figure), pulling the CS-gear into its mesh with the MP-gears, independent
+% of the 4 driving motors. Per-axis so roll/pitch/yaw can be tuned
+% separately -- yaw is the one flagged in dial-gauge source notes as most
+% affected by gravity-driven backlash near r = +/-90 deg.
 %
-% These fields are parameters only. They do not change q_pred or q_actual
-% unless the plant/sensor model explicitly implements the mesh model.
+% q_actual is computed from a force balance at the mesh, not an assumed
+% constant offset:
 %
-% Proposed simulation model:
+%   q_bias = clip( (tau_preload_mesh - tau_gravity(q)) / k_mesh , +/- mesh_backlash/2 )
+%   q_actual = backlash( q_pred + q_bias , width = mesh_backlash )
 %
-%   tau_gravity = tau_gravity_max .* sin(q_pred);
+% tau_gravity(q) is a simple placeholder model of gravity-induced torque on
+% the output link, worst-case near roll = +/-90 deg per dial-gauge source
+% notes (yaw vibration attributed to gravity there):
 %
-%   q_bias_raw = (tau_preload_mesh - tau_gravity) ./ k_mesh;
+%   tau_gravity(q) = tau_gravity_max .* sin(q)   (elementwise, q = [roll;pitch;yaw])
 %
-%   q_bias = min(max(q_bias_raw, -mesh_backlash/2), ...
-%                                mesh_backlash/2);
-%
-%   q_model = applyBacklash(q_pred + q_bias, mesh_backlash);
-%
-% q_model is the simulated orientation after mesh effects. On hardware,
-% q_actual remains the IMU-measured CS-gear orientation.
-%
-% The 0.8-degree value is a preliminary dial-gauge-based estimate and must
-% remain marked as TUNE until experimentally validated.
-pp.mesh_backlash = deg2rad([0.8; 0.8; 0.8]); ...
-    % TUNE mesh backlash width [roll; pitch; yaw] (rad)
-
-pp.tau_preload_mesh = [1; 1; 1]; ...
-    % TUNE mesh preload torque [roll; pitch; yaw] (N*m)
-
-pp.tau_gravity_max = [0.025; 0.025; 0.025]; ...
-    % TUNE maximum gravity disturbance [roll; pitch; yaw] (N*m)
-
-pp.k_mesh = [5; 5; 5]; ...
-    % TUNE effective mesh stiffness [roll; pitch; yaw] (N*m/rad)
+pp.mesh_backlash    = deg2rad([0.8; 0.8; 0.8]);  % TUNE mesh backlash width, [roll; pitch; yaw] (rad)
+                                                   % source: dial gauge measurement, ~0.8 deg coupling backlash
+pp.tau_preload_mesh = [0.025; 0.025; 0.025]; % nominal preload; plot script overrides this during sweeps (N*m)
+pp.tau_gravity_max  = [0.025; 0.025; 0.025];    % TUNE worst-case gravity torque on output link, [roll; pitch; yaw] (N*m)
+pp.k_mesh           = [5; 5; 5];    % TUNE effective mesh contact stiffness, [roll; pitch; yaw] (N*m/rad)
 
 % -------------------------------------------------------------------------
 % Initial conditions
@@ -288,8 +265,7 @@ pp.omega0 = [0; 0; 0; 0];   % initial motor velocities (rad/s)
 % Sanity checks: every per-motor field must be nMotors x 1.
 % -------------------------------------------------------------------------
 perMotorFields = { 'Kp','Ki','Kd','N','tau_max','J','b','Tc','tau_e', ...
-                   'alpha_max','omega_max','backlash','load', ...
-                   'tau_preload','theta0','omega0' };
+                   'alpha_max','omega_max','backlash','load','tau_preload','theta0','omega0' };
 for k = 1:numel(perMotorFields)
     f = perMotorFields{k};
     if ~isequal(size(pp.(f)), [pp.nMotors, 1])
@@ -301,18 +277,10 @@ end
 fprintf('params_abenics: loaded coordinate conventions + PID/plant params for %d motors, Ts=%.4gs.\n', ...
         pp.nMotors, pp.Ts);
 
-
-% Mesh-level fields use [roll; pitch; yaw], so they must be 3x1 rather than
-% the 4x1 motor-space shape used above.
-perAxisFields = { ...
-    'mesh_backlash', ...
-    'tau_preload_mesh', ...
-    'tau_gravity_max', ...
-    'k_mesh'};
-
+% Mesh-level fields are 3x1 (roll/pitch/yaw), not 4x1 (per-motor) -- checked separately.
+perAxisFields = {'mesh_backlash', 'tau_preload_mesh', 'tau_gravity_max', 'k_mesh'};
 for k = 1:numel(perAxisFields)
     f = perAxisFields{k};
-
     if ~isequal(size(pp.(f)), [3, 1])
         error('params_abenics:size', ...
               'pp.%s must be 3x1 ([roll; pitch; yaw]).', f);
@@ -342,7 +310,7 @@ params.singularity.poleAxes = [ ...
     0,  0, -1]';
 
 params.singularity.warningDistance = deg2rad(10); % rad %this are changeable variables IMPORTANT IMPORTANT IMPORATN
-params.singularity.dangerDistance  = deg2rad(2);  % rad
+params.singularity.dangerDistance  = deg2rad(1);  % rad
 % =========================================================================
 % MPC settings
 % =========================================================================
@@ -365,136 +333,182 @@ params.singularity.dangerDistance  = deg2rad(2);  % rad
 % =========================================================================
 
 % -----------------------------
-% Prediction and control horizons
+% MPC sample time and horizon
 % -----------------------------
-% The CEM decision space uses cemNumberOfKnots smooth local
-% rotation-vector knots on SO(3), even though the command sequence contains
-% Nc physical rotation increments.
-params.mpc.Np = 33;
-params.mpc.Nc = 12;
-params.mpc.maxQStep = deg2rad([2; 2; 2]);
-params.mpc.orientationRepresentation = "SO3LocalRotationVector";
+params.mpc.Np = 10;               % 20-step prediction horizon
+params.mpc.Nc = 5;
+params.mpc.maxQStep = deg2rad([2; 0; 0]); % max q_des_mpc movement per MPC step
 
 % -----------------------------
-% Hard constraints
+% fmincon solver settings
 % -----------------------------
+params.mpc.maxIterations = 15;
+params.mpc.maxFunctionEvaluations = 2000;
 params.mpc.constraintTolerance = 1e-6;
+params.mpc.optimalityTolerance = 1e-4;
+params.mpc.stepTolerance = 1e-6;
+
+params.mpc.recoveryClearDistance = deg2rad(3);
+
+% -----------------------------
+% CS gear orientation limits
+% q = [roll; pitch; yaw]
+% -----------------------------
 params.mpc.qMin = deg2rad([-45; -45; -45]);
 params.mpc.qMax = deg2rad([ 45;  45;  45]);
-params.mpc.thetaMin = deg2rad([-360; -360; -360; -360]);
-params.mpc.thetaMax = deg2rad([ 360;  360;  360;  360]);
 
-% IK can return equivalent rotary angles separated by integer multiples of
-% 2*pi. Unwrap each periodic MP-gear angle to the representation nearest the
-% previous continuous motor command/state before checking limits or dynamics.
-params.mpc.thetaUnwrapEnabled = true;
-params.mpc.thetaPeriodic = true(4, 1);
+% -----------------------------
+% Output-side MP gear angle limits
+% theta = [theta_rA; theta_pA; theta_rB; theta_pB]
+% -----------------------------
+params.mpc.thetaMin = deg2rad([-180; -180; -180; -180]);
+params.mpc.thetaMax = deg2rad([ 180;  180;  180;  180]);
 
-% The current test configuration allows each output-side MP shaft to use the
-% full +/-360 deg continuous range confirmed for this project. Continuous IK
-% unwrapping is still required so crossing a revolution boundary is smooth.
-params.mpc.enforceThetaPositionLimits = true;
+% -----------------------------
+% Temporary simulation motor/gear velocity and acceleration limits
+% These are starting simulation values, not confirmed hardware limits.
+% -----------------------------
+params.mpc.omegaMax = deg2rad([180; 180; 180; 180]);   % rad/s
+params.mpc.alphaMax = deg2rad([720; 720; 720; 720]);   % rad/s^2
 
-params.mpc.omegaMax = deg2rad([180; 180; 180; 180]);
-params.mpc.alphaMax = deg2rad([720; 720; 720; 720]);
-
-% Sample predicted motion between discrete plant states so a candidate cannot
-% jump across a pole while both endpoints appear safe.
-params.mpc.cemTransitionSamples = 3;
-params.mpc.transitionSafetySamples = 9;
+% -----------------------------
+% Singularity thresholds
+% Distance-based singularity detector only.
+% Do NOT use Jacobian singularity logic for this MPC.
+% -----------------------------
+params.singularity.warningDistance = deg2rad(10); % penalize inside 10 degrees
+params.singularity.dangerDistance  = deg2rad(1);  % reject inside 1 degree
 
 % -----------------------------
 % Internal MPC plant prediction model
+% This approximates PID + motor + mechanics inside the MPC prediction only.
+% It does NOT replace the real Simulink PID / plant.
 % -----------------------------
 params.plant.KpPlant = 80;
 params.plant.KdPlant = 12;
 
 % -----------------------------
-% Existing MPC cost weights retained as the CEM starting baseline
+% MPC cost weights
 % -----------------------------
-params.mpc.wTrack       = 2000;
-params.mpc.wTerminal    = 1000;
-params.mpc.wSmooth      = 1000;
-params.mpc.wMotor       = 100;
-params.mpc.wSingularity = 3000;
-params.mpc.wOmega       = 0.5;
+params.mpc.wTrack       = 2000;    % follow q_ref during the horizon
+params.mpc.wTerminal    = 1000;    % end the horizon close to q_ref
+params.mpc.wSmooth      = 1000;     % avoid jumpy q_des_mpc commands
+params.mpc.wMotor       = 100;      % avoid huge IK motor jumps
+params.mpc.wSingularity = 1000;   % strongly avoid singularity warning zone
+params.mpc.wOmega       = 0.5;    % avoid excessive predicted motor velocity
+
+% recovery response added by Ryan
+params.mpc.recoveryMaxQStep = deg2rad(0.25); % prevents intense overshoot in the recovery response from singularity
+% Unsafe-target override
+params.mpc.allowSingularTarget = false;
+
+% Print one MATLAB warning when override becomes active
+params.mpc.emitSingularTargetWarning = true;
+
+params.mpc.disableRecoveryForSingularTarget = false;
 
 % -----------------------------
-% Cross-Entropy Method search settings
+% Geometry-aware multi-start detour MPC
+% Initial tuning values; not yet physically validated.
 % -----------------------------
-% Four smooth knots produce 12 continuous decision variables:
-%   3 local rotation-vector components x 4 knots.
-params.mpc.cemNumberOfKnots = 4;
+params.mpc.enableDetourMultistart = true;
 
-% Fixed computation budget. Every MPC update evaluates exactly this many
-% candidates unless MATLAB is interrupted.
-params.mpc.cemPopulationSize = 64;
-params.mpc.cemIterations = 3;
-params.mpc.cemProgressEveryCandidates = 16;
-params.mpc.cemEliteFraction = 0.15;
-params.mpc.cemSmoothing = 0.70;
-
-% Initial and minimum search spread for local SO(3) rotation vectors.
-params.mpc.cemInitialStd = deg2rad([1.25; 1.25; 1.25]);
-params.mpc.cemMinimumStd = deg2rad([0.10; 0.10; 0.10]);
-params.mpc.cemMaximumStd = deg2rad([2.00; 2.00; 2.00]);
-params.mpc.cemWarmStartStdInflation = 1.25;
-params.mpc.cemNearSingularityStdInflation = 1.50;
-
-% While the physical target error is still larger than 3 deg, prevent the
-% learned distribution from collapsing below 0.35 deg per knot component.
-% Once near the target, cemMinimumStd is used again for accurate settling.
-params.mpc.cemSigmaFloor = deg2rad([0.35; 0.35; 0.35]);
-params.mpc.cemSettlingErrorThreshold = deg2rad(3.0);
-
-% Correlated noise makes complete candidate paths smooth and gives the
-% population a realistic chance to sustain roll/yaw motion around a pole.
-params.mpc.cemTemporalCorrelation = 0.85;
-
-% A permanent broad subset continues trialing competing routes even after the
-% learned covariance narrows. The fixed exploration std does not collapse.
-%params.mpc.cemExplorationFraction = 0.30;
-%params.mpc.cemExplorationStd = deg2rad([1.25; 1.25; 1.25]);
-
-% If physical target error fails to improve by 0.25 deg over 8 updates while
-% still more than 3 deg from target, widen the covariance and re-center most
-% of the mean toward the direct SO(3) command. Broad antithetic samples then
-% test both sides of the blocked direct route; no detour is predefined.
-%params.mpc.cemStagnationUpdates = 8;
-%params.mpc.cemStagnationTolerance = deg2rad(0.25);
-%params.mpc.cemCovarianceResetScale = 2.50;
-%params.mpc.cemStagnationMeanDirectBlend = 0.75;
-
-% Reset the warm-start distribution when the requested reference changes by
-% more than this physical SO(3) rotation distance.
-params.mpc.cemReferenceResetThreshold = deg2rad(8);
-
-% Multimodal CEM
-params.mpc.cemModeCount = 4;
-
-% Total population remains 64:
-% 4 modes x 16 candidates = 64 candidates per iteration
-params.mpc.cemPopulationPerMode = 16;
-
-% Four elites per mode when using 16 candidates
-params.mpc.cemEliteFraction = 0.25;
-
-% Initial symmetric separation between search modes
-params.mpc.cemModeLateralBias = deg2rad(0.75);
-params.mpc.cemModeTwistBias = deg2rad(0.35);
-
-% Bias is strongest at the beginning of the predicted command sequence
-params.mpc.cemModeBiasProfile = [1.00, 0.70, 0.35, 0.00];
-
-% Only activate four-mode search when the direct path approaches this close
-params.mpc.cemMultimodalActivationDistance = ...
+% Arm geometry-aware starts when a nominal prediction enters the warning zone.
+params.mpc.detourTriggerDistance = ...
     params.singularity.warningDistance;
 
-% -----------------------------
-% Diagnostics
-% -----------------------------
-params.mpc.debug = true;
-params.mpc.liveProgress = true;
-params.mpc.enableTestDiagnostics = false;
+% Commitment can clear only after the direct route remains safely clear for
+% several consecutive updates and the old pole is behind the planned motion.
+params.mpc.detourClearDistance = ...
+    params.singularity.warningDistance;
+params.mpc.detourClearConfirmations = 3;
 
-params.stage = "SO(3) CEM MPC plus tendon-preload and mesh-backlash parameters";
+% First proof uses one clearance and three starts:
+% shifted warm start, positive side, and negative side.
+params.mpc.detourClearances = ...
+    params.singularity.warningDistance;  % 10 deg initial ring clearance
+
+% After a side is committed, the working ring may shrink toward 5 degrees
+% as the measured plant approaches the pole. This leaves enough of the
+% six-move control horizon for actual azimuth progress around the pole.
+params.mpc.detourContinuationClearance = max( ...
+    params.mpc.recoveryClearDistance + deg2rad(2), ...
+    deg2rad(5));
+
+params.mpc.maxDetourStarts = 3;
+
+params.mpc.detourTargetTolerance = deg2rad(1);
+params.mpc.detourReferenceChangeTolerance = deg2rad(5);
+params.mpc.maxDetourFailures = 2;
+
+% Geometry resolution and numerical tolerances used only to construct z0.
+params.mpc.detourAxisSampleStep = deg2rad(0.25);
+params.mpc.detourGeometryTolerance = 1e-10;
+params.mpc.detourObjectiveTieTolerance = 1e-6;
+
+% Densify each rotation segment until every raw Euler increment is below
+% this fraction of maxQStep before Nc-point prefix resampling.
+params.mpc.detourDenseQStepFraction = 0.5;
+
+% During a blocked route, a safe boundary-stall solution is retained only as
+% a backup. Primary route candidates must make at least this much azimuth
+% progress around the selected signed pole.
+params.mpc.detourMinimumOptimizedProgress = deg2rad(0.5);
+
+
+% V5 route execution uses physical tangent-plane displacement, not azimuth.
+% A detour can only claim tangential progress while the predicted tracked
+% axis remains at least this far from the selected pole.
+params.mpc.detourProgressMinimumClearance = ...
+    params.mpc.detourContinuationClearance;  % 5 deg
+
+% Check the first applied command and the third predicted plant step.
+params.mpc.detourNearTermCommandCount = 3;
+
+% Physical tracked-axis displacement requirements in the pole tangent plane.
+% These are deliberately smaller than the old azimuth thresholds because the
+% physical displacement includes the detour-ring radius.
+params.mpc.detourFirstTangentialDisplacement = deg2rad(0.02);
+params.mpc.detourNearTermTangentialDisplacement = deg2rad(0.08);
+
+% If the plant is already inside the progress-clearance ring, require monotonic
+% outward motion before tangential progress can qualify.
+params.mpc.detourMinimumOutwardProgress = deg2rad(0.25);
+
+% Sample each actually applied plant transition so a command cannot jump from
+% one safe endpoint to another by crossing through a singular pole.
+params.mpc.transitionSafetySamples = 9;
+
+% Select the free twist about each geometric tracked-axis sample so the IK
+% branch changes continuously. These settings affect initial guesses only.
+params.mpc.detourTwistCoarseCount = 37;
+params.mpc.detourTwistFineCount = 21;
+params.mpc.detourTwistQWeight = 0.05;
+params.mpc.detourTwistAngleWeight = 1e-5;
+
+% If a geometric start violates motor dynamics, blend it toward the shifted
+% warm start while preserving the requested detour side and all pole limits.
+params.mpc.detourSeedBlendScales = ...
+    [1.00; 0.75; 0.50; 0.35; 0.20; 0.10];
+params.mpc.detourMinimumSeedSideProgress = deg2rad(0.5);
+params.mpc.allowInfeasibleDetourSeed = true;
+
+% -----------------------------
+% Candidate detour size
+% Used by the sampling-based MPC to generate pitch/yaw detour paths.
+% -----------------------------
+params.mpc.avoidOffset = deg2rad(8);
+
+
+% new struct
+
+meshContact.tau_preload_mesh = pp.tau_preload_mesh;
+meshContact.tau_gravity_max  = pp.tau_gravity_max;
+meshContact.k_mesh           = pp.k_mesh;
+meshContact.mesh_backlash    = pp.mesh_backlash;
+meshContact.J_mesh           = [1e-3; 1e-3; 1e-3];
+% Near-critical damping for J_mesh = 1e-3 and k_mesh = 5:
+% c_critical = 2*sqrt(k*J) = 0.1414 N*m*s/rad.
+meshContact.c_contact        = [0.15; 0.15; 0.15];
+meshContact.c_free           = [0.001; 0.001; 0.001];
+meshContact.Ts               = pp.Ts_plant;
