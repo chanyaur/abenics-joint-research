@@ -10,7 +10,7 @@
 % A direct pitch-only route passes through the singular point. A successful
 % MPC should use a coordinated roll/yaw detour while respecting dangerDistance.
 %
-% This test uses the same temporary second-order plant as the sine-wave test.
+% This test uses the same temporary second-order plant as the sine-wave test.j
 % Repeat final validation with the real Simulink PID/plant.
 % =========================================================================
 

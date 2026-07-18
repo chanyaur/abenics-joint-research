@@ -22,8 +22,8 @@ run("params_abenics_coordinate.m");
 params.mpc.debug = true;
 simulationTime = 0.2;
 
-params.mpc.Np = 10;
-params.mpc.Nc = 3;
+params.mpc.Np = 32;
+params.mpc.Nc = 12;
 params.mpc.maxIterations = 5;
 params.mpc.maxFunctionEvaluations = 300;
 
@@ -38,7 +38,7 @@ sineFrequency = 0.20;         % Hz
 sineAmplitude = deg2rad(5);   % +/- 5 degrees
 
 % 1 = roll, 2 = pitch, 3 = yaw
-sineAxis = 1;
+sineAxis = 2;
 
 % q = [roll; pitch; yaw]
 q_center = deg2rad([15; 10; 5]);
