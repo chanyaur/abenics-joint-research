@@ -5,7 +5,7 @@
 clf;
 
 model_name = 'tendons_simulink';
-preload_values = [0, 0.0125, 0.025, 0.0375, 0.05]; % N*m
+preload_values = [0, 0.0125, 0.025, 0.0375, 0.05, 0.075, 1]; % N*m
 axis_idx = 1;                                        % 1=roll, 2=pitch, 3=yaw
 
 n_cases = numel(preload_values);
@@ -87,6 +87,7 @@ xlabel('Time (s)');
 ylabel('q_{pred}-q_{actual} (deg)');
 title(sprintf('Mesh tracking error, axis %d', axis_idx));
 legend('Location','best');
+plot()
 
 results = table(preload_values(:), loop_area, rad2deg(rms_error), ...
     rad2deg(peak_error), rad2deg(mean_error), ...

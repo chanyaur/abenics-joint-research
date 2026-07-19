@@ -221,6 +221,9 @@ pp.load      = [0; 0; 0; 0];                % constant external load torque (N*m
 % stays pinned against one flank of the backlash gap.
 pp.tau_preload = [0; 0; 0; 0];              % TUNE constant tendon preload torque (N*m)
 
+% Preload at which effective backlash reaches zero [N*m]
+pp.tau_preload_full_engagement = [0.05; 0.05; 0.05];
+
 % Smoothing constant for the Coulomb friction tanh() so it stays differentiable
 % for the ODE solver (small -> closer to ideal sign()).
 pp.omega_eps = 1e-3;                        % rad/s
@@ -254,6 +257,11 @@ pp.mesh_backlash    = deg2rad([0.8; 0.8; 0.8]);  % TUNE mesh backlash width, [ro
 pp.tau_preload_mesh = [0.025; 0.025; 0.025]; % nominal preload; plot script overrides this during sweeps (N*m)
 pp.tau_gravity_max  = [0.025; 0.025; 0.025];    % TUNE worst-case gravity torque on output link, [roll; pitch; yaw] (N*m)
 pp.k_mesh           = [5; 5; 5];    % TUNE effective mesh contact stiffness, [roll; pitch; yaw] (N*m/rad)
+
+% rad/(N*m)
+pp.alpha_preload = pp.mesh_backlash ...
+    ./ pp.tau_preload_full_engagement;
+
 
 % -------------------------------------------------------------------------
 % Initial conditions
@@ -512,3 +520,4 @@ meshContact.J_mesh           = [1e-3; 1e-3; 1e-3];
 meshContact.c_contact        = [0.15; 0.15; 0.15];
 meshContact.c_free           = [0.001; 0.001; 0.001];
 meshContact.Ts               = pp.Ts_plant;
+meshContact.alpha_preload = pp.alpha_preload;
