@@ -5,7 +5,7 @@
 clf;
 
 model_name = 'tendons_simulink';
-preload_values = [0, 0.0125, 0.025, 0.0375, 0.05, 0.075, 1]; % N*m
+preload_values = [0, 0.0125, 0.025, 0.0375, 0.05]; % N*m
 axis_idx = 1;                                        % 1=roll, 2=pitch, 3=yaw
 
 n_cases = numel(preload_values);
@@ -87,7 +87,6 @@ xlabel('Time (s)');
 ylabel('q_{pred}-q_{actual} (deg)');
 title(sprintf('Mesh tracking error, axis %d', axis_idx));
 legend('Location','best');
-plot()
 
 results = table(preload_values(:), loop_area, rad2deg(rms_error), ...
     rad2deg(peak_error), rad2deg(mean_error), ...
@@ -97,13 +96,16 @@ results = table(preload_values(:), loop_area, rad2deg(rms_error), ...
 disp(results);
 
 figure(3); clf;
+sgtitle('Effect of Tendon Preload on Tracking Performance');
 tiledlayout(1,2);
 nexttile;
 plot(preload_values, rad2deg(rms_error), 'o-', 'LineWidth', 1.5);
 grid on; xlabel('Preload (N m)'); ylabel('RMS error (deg)');
+title('RMS Tracking Error');
 nexttile;
 plot(preload_values, rad2deg(peak_error), 'o-', 'LineWidth', 1.5);
 grid on; xlabel('Preload (N m)'); ylabel('Peak error (deg)');
+title('Peak Tracking Error');
 
 function x = localNx3(data)
 % Normalize common To Workspace layouts to N-by-3 without a blind transpose.
