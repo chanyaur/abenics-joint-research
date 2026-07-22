@@ -1,4 +1,4 @@
-function q_des_mpc = abenicsOrientationMPC( ...
+function q_des_mpc = abenicsOrientationMPC_animation( ...
     q_ref, theta_actual, q_des_prev, params)
 %ABENICSORIENTATIONMPC SO(3) sampling-based nonlinear MPC using CEM.
 %
@@ -43,6 +43,8 @@ function q_des_mpc = abenicsOrientationMPC( ...
     persistent bestTargetError
     persistent stagnationCounter
     persistent stagnationResetCount
+
+    global ABENICS_CEM_ANIMATION_DATA
 
     q_ref = q_ref(:);
     theta_actual = theta_actual(:);
@@ -194,6 +196,13 @@ function q_des_mpc = abenicsOrientationMPC( ...
     end
 
     liveProgress = logical(readMpcSetting(params, 'liveProgress', false));
+    captureAnimation = logical(readMpcSetting( ...
+        params, 'captureCEMAnimation', false));
+
+    if captureAnimation
+        ABENICS_CEM_ANIMATION_DATA = [];
+    end
+
     if liveProgress
         fprintf(['\n[CEM] update=%d | q=[%.3f %.3f %.3f] deg | ', ...
                  'targetErr=%.3f deg | minPole=%.3f deg | ', ...
@@ -206,10 +215,11 @@ function q_des_mpc = abenicsOrientationMPC( ...
     end
 
     solveTimer = tic;
-    [best, cemDiagnostics, ~, finalStd] = runCemSearch( ...
-        meanKnots, stdKnots, x0, qRefHorizon, q_des_prev, ...
-        maxQStep, effectiveMinimumStd, initialStd, ...
-        Np, Nc, params, liveProgress);
+    [best, cemDiagnostics, ~, finalStd, animationData] = ...
+        runCemSearch( ...
+            meanKnots, stdKnots, x0, qRefHorizon, q_des_prev, ...
+            maxQStep, effectiveMinimumStd, initialStd, ...
+            Np, Nc, params, liveProgress, captureAnimation);
     solveTime = toc(solveTimer);
 
     fallbackUsed = false;
@@ -303,6 +313,47 @@ function q_des_mpc = abenicsOrientationMPC( ...
     diagnostics.stagnationResetCount = stagnationResetCount;
     diagnostics.rejectionCounts = cemDiagnostics.rejectionCounts;
 
+    if captureAnimation
+        animationData.version = 1.2;
+        animationData.update = updateCounter;
+        animationData.qStart = q_current;
+        animationData.qTarget = q_ref;
+        animationData.startAxis = trackedAxisFromRotm( ...
+            qToRotmXYZ(q_current), params);
+        animationData.targetAxis = trackedAxisFromRotm( ...
+            qToRotmXYZ(q_ref), params);
+        animationData.poleAxes = params.singularity.poleAxes;
+        animationData.warningDistance = ...
+            params.singularity.warningDistance;
+        animationData.dangerDistance = ...
+            params.singularity.dangerDistance;
+        animationData.Np = Np;
+        animationData.Nc = Nc;
+        animationData.population = cemDiagnostics.population;
+        animationData.iterationsCompleted = ...
+            cemDiagnostics.iterationsCompleted;
+        animationData.winningAxisPath = best.axisPath;
+        animationData.winningQPath = best.qPath;
+        animationData.winningDeltaPhi = best.deltaPhi;
+
+        [winningCommandQPath, winningCommandAxisPath] = ...
+            buildCommandAnimationPath( ...
+                best.deltaPhi, q_des_prev, params);
+
+        animationData.winningCommandAxisPath = ...
+            winningCommandAxisPath;
+        animationData.winningCommandQPath = ...
+            winningCommandQPath;
+        animationData.winningCost = best.cost;
+        animationData.winningMinimumPoleDistance = ...
+            best.minimumPoleDistance;
+        animationData.accepted = accepted;
+        animationData.fallbackUsed = fallbackUsed;
+        animationData.solveTime = solveTime;
+
+        ABENICS_CEM_ANIMATION_DATA = animationData;
+    end
+
     publishDiagnostics(diagnostics, params);
 
     if isfield(params, 'mpc') && isfield(params.mpc, 'debug') && ...
@@ -345,10 +396,11 @@ end
 % =========================================================================
 % CEM search
 % =========================================================================
-function [best, diagnostics, meanKnots, stdKnots] = runCemSearch( ...
-    meanKnots, stdKnots, x0, qRefHorizon, q_des_prev, ...
-    maxQStep, effectiveMinimumStd, initialStd, ...
-    Np, Nc, params, liveProgress)
+function [best, diagnostics, meanKnots, stdKnots, animationData] = ...
+    runCemSearch( ...
+        meanKnots, stdKnots, x0, qRefHorizon, q_des_prev, ...
+        maxQStep, effectiveMinimumStd, initialStd, ...
+        Np, Nc, params, liveProgress, captureAnimation)
 
     population = max(8, round(readMpcSetting( ...
         params, 'cemPopulationSize', 64)));
@@ -386,6 +438,28 @@ function [best, diagnostics, meanKnots, stdKnots] = runCemSearch( ...
         directDeltaPhi, size(meanKnots, 2));
 
     best = emptyCandidateResult(Nc);
+
+    animationData = struct;
+    if captureAnimation
+        emptyIteration.axisPaths = cell(population, 1);
+        emptyIteration.qPaths = cell(population, 1);
+        emptyIteration.commandAxisPaths = cell(population, 1);
+        emptyIteration.commandQPaths = cell(population, 1);
+        emptyIteration.deltaPhi = cell(population, 1);
+        emptyIteration.valid = false(population, 1);
+        emptyIteration.costs = inf(population, 1);
+        emptyIteration.rejectionCodes = ones(population, 1);
+        emptyIteration.minimumPoleDistances = NaN(population, 1);
+        emptyIteration.eliteIndices = zeros(0, 1);
+        emptyIteration.bestCandidateIndex = NaN;
+        emptyIteration.meanKnotsBefore = [];
+        emptyIteration.stdKnotsBefore = [];
+        emptyIteration.meanKnotsAfter = [];
+        emptyIteration.stdKnotsAfter = [];
+        animationData.iteration = repmat( ...
+            emptyIteration, iterations, 1);
+    end
+
     diagnostics.population = population;
     diagnostics.iterationsRequested = iterations;
     diagnostics.iterationsCompleted = 0;
@@ -399,6 +473,14 @@ function [best, diagnostics, meanKnots, stdKnots] = runCemSearch( ...
 
     for iteration = 1:iterations
         iterationTimer = tic;
+
+        if captureAnimation
+            animationData.iteration(iteration).meanKnotsBefore = ...
+                meanKnots;
+            animationData.iteration(iteration).stdKnotsBefore = ...
+                stdKnots;
+        end
+
         candidateKnots = sampleCandidateKnots( ...
             meanKnots, stdKnots, directKnots, maxQStep, ...
             population, temporalCorrelation, ...
@@ -416,6 +498,40 @@ function [best, diagnostics, meanKnots, stdKnots] = runCemSearch( ...
             result = evaluateCandidate( ...
                 deltaPhi, x0, qRefHorizon, q_des_prev, Np, Nc, params);
             results(candidateIndex) = result;
+
+            if captureAnimation
+                % Save the exact real local rotation-vector sequence sampled
+                % by CEM. The animation script can always rebuild the
+                % command-space path from deltaPhi, even if a candidate is
+                % later rejected or a path-capture field is unavailable.
+                animationData.iteration(iteration).deltaPhi{candidateIndex} = ...
+                    deltaPhi;
+
+                [commandQForAnimation, commandAxisForAnimation] = ...
+                    buildCommandAnimationPath( ...
+                        deltaPhi, q_des_prev, params);
+
+                result.commandQPath = commandQForAnimation;
+                result.commandAxisPath = commandAxisForAnimation;
+
+                animationData.iteration(iteration).axisPaths{candidateIndex} = ...
+                    result.axisPath;
+                animationData.iteration(iteration).qPaths{candidateIndex} = ...
+                    result.qPath;
+                animationData.iteration(iteration).commandAxisPaths{candidateIndex} = ...
+                    result.commandAxisPath;
+                animationData.iteration(iteration).commandQPaths{candidateIndex} = ...
+                    result.commandQPath;
+                animationData.iteration(iteration).valid(candidateIndex) = ...
+                    result.valid;
+                animationData.iteration(iteration).costs(candidateIndex) = ...
+                    result.cost;
+                animationData.iteration(iteration).rejectionCodes(candidateIndex) = ...
+                    result.rejectionCode;
+                animationData.iteration(iteration).minimumPoleDistances(candidateIndex) = ...
+                    result.minimumPoleDistance;
+            end
+
             diagnostics.candidatesEvaluated = ...
                 diagnostics.candidatesEvaluated + 1;
 
@@ -453,6 +569,15 @@ function [best, diagnostics, meanKnots, stdKnots] = runCemSearch( ...
             % Re-expand the search instead of collapsing around infeasibility.
             stdKnots = min(1.35 * stdKnots, maxStdMatrix);
             meanKnots = 0.5 * meanKnots + 0.5 * directKnots;
+
+            if captureAnimation
+                animationData.iteration(iteration).eliteIndices = ...
+                    zeros(0, 1);
+                animationData.iteration(iteration).meanKnotsAfter = ...
+                    meanKnots;
+                animationData.iteration(iteration).stdKnotsAfter = ...
+                    stdKnots;
+            end
 
             if liveProgress
                 fprintf([ ...
@@ -499,6 +624,17 @@ function [best, diagnostics, meanKnots, stdKnots] = runCemSearch( ...
         bestIterationIndex = safeIndices( ...
             find(costs(safeIndices) == min(costs(safeIndices)), 1, 'first'));
         bestIteration = results(bestIterationIndex);
+
+        if captureAnimation
+            animationData.iteration(iteration).eliteIndices = ...
+                eliteIndices(:);
+            animationData.iteration(iteration).bestCandidateIndex = ...
+                bestIterationIndex;
+            animationData.iteration(iteration).meanKnotsAfter = ...
+                meanKnots;
+            animationData.iteration(iteration).stdKnotsAfter = ...
+                stdKnots;
+        end
 
         if liveProgress
             fprintf([ ...
@@ -598,6 +734,46 @@ function noise = temporallyCorrelatedNoise(rows, columns, correlation)
 end
 
 % =========================================================================
+% Animation command-path reconstruction
+% =========================================================================
+function [qPath, axisPath] = buildCommandAnimationPath( ...
+    deltaPhi, q_des_prev, params)
+% Rebuild the complete command-space path from the exact deltaPhi sequence
+% sampled by CEM. This function does not evaluate safety or cost; those are
+% still determined by the normal candidate evaluator.
+
+    numberOfSteps = size(deltaPhi, 2);
+
+    qPath = NaN(3, numberOfSteps + 1);
+    axisPath = NaN(3, numberOfSteps + 1);
+
+    if size(deltaPhi, 1) ~= 3 || any(~isfinite(deltaPhi(:)))
+        return;
+    end
+
+    commandRotation = qToRotmXYZ(q_des_prev);
+    qPrevious = q_des_prev(:);
+
+    qPath(:, 1) = qPrevious;
+    axisPath(:, 1) = trackedAxisFromRotm( ...
+        commandRotation, params);
+
+    for stepIndex = 1:numberOfSteps
+        commandRotation = commandRotation * ...
+            rotvecToRotm(deltaPhi(:, stepIndex));
+
+        qCurrent = rotmToQXYZContinuous( ...
+            commandRotation, qPrevious);
+
+        qPath(:, stepIndex + 1) = qCurrent;
+        axisPath(:, stepIndex + 1) = trackedAxisFromRotm( ...
+            commandRotation, params);
+
+        qPrevious = qCurrent;
+    end
+end
+
+% =========================================================================
 % Candidate evaluation
 % =========================================================================
 function result = evaluateCandidate( ...
@@ -605,6 +781,49 @@ function result = evaluateCandidate( ...
 
     result = emptyCandidateResult(Nc);
     result.deltaPhi = deltaPhi;
+    result.axisPath = NaN(3, Np + 1);
+    result.qPath = NaN(3, Np + 1);
+    result.commandAxisPath = NaN(3, Nc + 1);
+    result.commandQPath = NaN(3, Nc + 1);
+
+    % Capture the complete command-space trajectory before any plant, IK,
+    % dynamics, or pole rejection can truncate the predicted physical path.
+    % These are the actual local rotation-vector commands sampled by CEM.
+    try
+        commandRotationCapture = qToRotmXYZ(q_des_prev);
+        qCommandCapturePrevious = q_des_prev;
+
+        result.commandQPath(:, 1) = q_des_prev;
+        result.commandAxisPath(:, 1) = trackedAxisFromRotm( ...
+            commandRotationCapture, params);
+
+        for captureStep = 1:Nc
+            commandRotationCapture = commandRotationCapture * ...
+                rotvecToRotm(deltaPhi(:, captureStep));
+
+            qCommandCapture = rotmToQXYZContinuous( ...
+                commandRotationCapture, qCommandCapturePrevious);
+
+            result.commandQPath(:, captureStep + 1) = qCommandCapture;
+            result.commandAxisPath(:, captureStep + 1) = ...
+                trackedAxisFromRotm(commandRotationCapture, params);
+
+            qCommandCapturePrevious = qCommandCapture;
+        end
+    catch
+        % Leave unavailable capture samples as NaN. Candidate evaluation
+        % below still determines the real validity and cost.
+    end
+
+    try
+        qStartPredicted = abenicsFK(x0(1:4), params);
+        qStartPredicted = qStartPredicted(:);
+        result.qPath(:, 1) = qStartPredicted;
+        result.axisPath(:, 1) = trackedAxisFromRotm( ...
+            qToRotmXYZ(qStartPredicted), params);
+    catch
+        % Leave the initial path sample as NaN if FK cannot be evaluated.
+    end
 
     if ~isequal(size(deltaPhi), [3, Nc]) || ...
             any(~isfinite(deltaPhi(:)))
@@ -717,6 +936,11 @@ function result = evaluateCandidate( ...
             qPred = abenicsFK(thetaPred, params);
             qPred = qPred(:);
             predictedRotation = qToRotmXYZ(qPred);
+
+            result.qPath(:, step + 1) = qPred;
+            result.axisPath(:, step + 1) = ...
+                trackedAxisFromRotm(predictedRotation, params);
+
             [sPred, poleDistances] = ...
                 poleDistancesFromRotm(predictedRotation, params);
             if any(~isfinite(qPred)) || any(~isfinite(poleDistances)) || ...
@@ -783,6 +1007,10 @@ function result = emptyCandidateResult(Nc)
     result.firstTransitionPoleDistance = NaN;
     result.terminalOrientation = NaN(3, 1);
     result.terminalPhysicalError = NaN;
+    result.axisPath = NaN(3, 0);
+    result.qPath = NaN(3, 0);
+    result.commandAxisPath = NaN(3, 0);
+    result.commandQPath = NaN(3, 0);
     result.rejectionCode = 1;
 end
 
@@ -1114,6 +1342,14 @@ function [minimumDistance, distances] = poleDistancesFromQ(q, params)
         poleDistancesFromRotm(qToRotmXYZ(q), params);
 end
 
+function trackedAxis = trackedAxisFromRotm(rotation, params)
+
+    bodyAxis = params.singularity.trackedBodyAxis(:);
+    bodyAxis = bodyAxis / norm(bodyAxis);
+    trackedAxis = rotation * bodyAxis;
+    trackedAxis = trackedAxis / norm(trackedAxis);
+end
+
 function [minimumDistance, distances] = ...
     poleDistancesFromRotm(rotation, params)
 
@@ -1124,10 +1360,7 @@ function [minimumDistance, distances] = ...
         return;
     end
 
-    bodyAxis = params.singularity.trackedBodyAxis(:);
-    bodyAxis = bodyAxis / norm(bodyAxis);
-    trackedAxis = rotation * bodyAxis;
-    trackedAxis = trackedAxis / norm(trackedAxis);
+    trackedAxis = trackedAxisFromRotm(rotation, params);
 
     poleAxes = params.singularity.poleAxes;
     distances = zeros(size(poleAxes, 2), 1);
