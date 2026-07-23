@@ -295,218 +295,149 @@ for k = 1:numel(perAxisFields)
     end
 end
 
-
 % -------------------------------------------------------------------------
 % Distance-based singularity detection settings
 % -------------------------------------------------------------------------
-% This detector assumes ABENICS singularities occur when the tracked CS gear
-% axis points too close to one of the 6 world pole axes:
-% ±X, ±Y, ±Z.
-%
-% These thresholds are starting values, not physically validated.
+% The tracked CS-gear local +X axis is checked against all six signed world
+% poles: +/-X, +/-Y, +/-Z.
 
 params.singularity.method = "poleDistance";
-
-params.singularity.trackedBodyAxis = [1; 0; 0]; % CS gear local X-axis
+params.singularity.trackedBodyAxis = [1; 0; 0];
 
 params.singularity.poleAxes = [ ...
-    1,  0,  0;
+     1,  0,  0;
     -1,  0,  0;
-    0,  1,  0;
-    0, -1,  0;
-    0,  0,  1;
-    0,  0, -1]';
+     0,  1,  0;
+     0, -1,  0;
+     0,  0,  1;
+     0,  0, -1]';
 
-params.singularity.warningDistance = deg2rad(10); % rad %this are changeable variables IMPORTANT IMPORTANT IMPORATN
-params.singularity.dangerDistance  = deg2rad(1);  % rad
-% =========================================================================
-% MPC settings
-% =========================================================================
-% These settings are only for the nonlinear dynamic orientation-command MPC.
-%
-% The MPC output is:
-%
-%   q_des_mpc = [roll_des_mpc;
-%                pitch_des_mpc;
-%                yaw_des_mpc]
-%
-% The MPC does NOT output motor command u.
-% The MPC does NOT output theta_cmd as its main output.
-% The MPC output q_des_mpc goes into abenicsIK, which then produces
-% theta_cmd for the existing PID / plant.
-%
-% The internal MPC prediction model uses a simplified second-order
-% position-tracking model only for prediction. It does NOT replace the real
-% Simulink PID / plant.
-% =========================================================================
+% Frozen safety configuration used by the validated v2.2 controller.
+params.singularity.warningDistance = deg2rad(10);
+params.singularity.dangerDistance  = deg2rad(2);
 
-% -----------------------------
-% MPC sample time and horizon
-% -----------------------------
-params.mpc.Np = 10;               % 20-step prediction horizon
-params.mpc.Nc = 5;
-params.mpc.maxQStep = deg2rad([2; 0; 0]); % max q_des_mpc movement per MPC step
+% =========================================================================
+% SO(3) CEM ORIENTATION-STATE MPC — CURRENT STABLE V2.2 CONFIGURATION
+% =========================================================================
+%
+% Public controller:
+%   q_des_mpc = abenicsOrientationMPC( ...
+%       q_ref, theta_actual, q_des_prev, params)
+%
+% The MPC output is q_des_mpc = [roll; pitch; yaw].
+% IK converts q_des_mpc to the four output-side MP-gear commands.
 
-% -----------------------------
-% fmincon solver settings
-% -----------------------------
-params.mpc.maxIterations = 15;
-params.mpc.maxFunctionEvaluations = 2000;
+% -------------------------------------------------------------------------
+% Prediction and control horizons
+% -------------------------------------------------------------------------
+params.mpc.Np = 33;
+params.mpc.Nc = 12;
+params.mpc.maxQStep = deg2rad([2; 2; 2]);
+params.mpc.orientationRepresentation = "SO3LocalRotationVector";
+
+% -------------------------------------------------------------------------
+% Hard constraints
+% -------------------------------------------------------------------------
 params.mpc.constraintTolerance = 1e-6;
-params.mpc.optimalityTolerance = 1e-4;
-params.mpc.stepTolerance = 1e-6;
 
-params.mpc.recoveryClearDistance = deg2rad(3);
-
-% -----------------------------
-% CS gear orientation limits
-% q = [roll; pitch; yaw]
-% -----------------------------
+% Normal operating Euler-interface limits.
 params.mpc.qMin = deg2rad([-45; -45; -45]);
 params.mpc.qMax = deg2rad([ 45;  45;  45]);
 
-% -----------------------------
-% Output-side MP gear angle limits
-% theta = [theta_rA; theta_pA; theta_rB; theta_pB]
-% -----------------------------
-params.mpc.thetaMin = deg2rad([-180; -180; -180; -180]);
-params.mpc.thetaMax = deg2rad([ 180;  180;  180;  180]);
+% Continuous output-side MP-shaft range.
+params.mpc.thetaMin = deg2rad([-360; -360; -360; -360]);
+params.mpc.thetaMax = deg2rad([ 360;  360;  360;  360]);
 
-% -----------------------------
-% Temporary simulation motor/gear velocity and acceleration limits
-% These are starting simulation values, not confirmed hardware limits.
-% -----------------------------
-params.mpc.omegaMax = deg2rad([180; 180; 180; 180]);   % rad/s
-params.mpc.alphaMax = deg2rad([720; 720; 720; 720]);   % rad/s^2
+params.mpc.thetaUnwrapEnabled = true;
+params.mpc.thetaPeriodic = true(4, 1);
+params.mpc.enforceThetaPositionLimits = true;
 
-% -----------------------------
-% Singularity thresholds
-% Distance-based singularity detector only.
-% Do NOT use Jacobian singularity logic for this MPC.
-% -----------------------------
-params.singularity.warningDistance = deg2rad(10); % penalize inside 10 degrees
-params.singularity.dangerDistance  = deg2rad(1);  % reject inside 1 degree
+params.mpc.omegaMax = deg2rad([180; 180; 180; 180]);
+params.mpc.alphaMax = deg2rad([720; 720; 720; 720]);
 
-% -----------------------------
-% Internal MPC plant prediction model
-% This approximates PID + motor + mechanics inside the MPC prediction only.
-% It does NOT replace the real Simulink PID / plant.
-% -----------------------------
+% Check interpolated motion between predicted discrete states.
+params.mpc.cemTransitionSamples = 3;
+params.mpc.transitionSafetySamples = 9;
+
+% -------------------------------------------------------------------------
+% Internal MPC prediction model
+% -------------------------------------------------------------------------
 params.plant.KpPlant = 80;
 params.plant.KdPlant = 12;
 
-% -----------------------------
-% MPC cost weights
-% -----------------------------
-params.mpc.wTrack       = 2000;    % follow q_ref during the horizon
-params.mpc.wTerminal    = 1000;    % end the horizon close to q_ref
-params.mpc.wSmooth      = 1000;     % avoid jumpy q_des_mpc commands
-params.mpc.wMotor       = 100;      % avoid huge IK motor jumps
-params.mpc.wSingularity = 1000;   % strongly avoid singularity warning zone
-params.mpc.wOmega       = 0.5;    % avoid excessive predicted motor velocity
+% -------------------------------------------------------------------------
+% Cost weights
+% -------------------------------------------------------------------------
+params.mpc.wTrack       = 2000;
+params.mpc.wTerminal    = 1000;
+params.mpc.wSmooth      = 1000;
+params.mpc.wMotor       = 100;
+params.mpc.wSingularity = 4000;
+params.mpc.wOmega       = 0.5;
 
-% recovery response added by Ryan
-params.mpc.recoveryMaxQStep = deg2rad(0.25); % prevents intense overshoot in the recovery response from singularity
-% Unsafe-target override
+% -------------------------------------------------------------------------
+% Recovery behavior
+% -------------------------------------------------------------------------
+params.mpc.recoveryClearDistance = deg2rad(3);
+params.mpc.recoveryMaxQStep = deg2rad(0.25);
+
 params.mpc.allowSingularTarget = false;
-
-% Print one MATLAB warning when override becomes active
 params.mpc.emitSingularTargetWarning = true;
-
 params.mpc.disableRecoveryForSingularTarget = false;
 
-% -----------------------------
-% Geometry-aware multi-start detour MPC
-% Initial tuning values; not yet physically validated.
-% -----------------------------
-params.mpc.enableDetourMultistart = true;
+% -------------------------------------------------------------------------
+% Cross-Entropy Method search
+% -------------------------------------------------------------------------
+params.mpc.cemNumberOfKnots = 4;
+params.mpc.cemPopulationSize = 64;
+params.mpc.cemIterations = 3;
+params.mpc.cemProgressEveryCandidates = 16;
+params.mpc.cemEliteFraction = 0.15;
+params.mpc.cemSmoothing = 0.70;
 
-% Arm geometry-aware starts when a nominal prediction enters the warning zone.
-params.mpc.detourTriggerDistance = ...
-    params.singularity.warningDistance;
+params.mpc.cemInitialStd = deg2rad([1.25; 1.25; 1.25]);
+params.mpc.cemMinimumStd = deg2rad([0.10; 0.10; 0.10]);
+params.mpc.cemMaximumStd = deg2rad([2.00; 2.00; 2.00]);
 
-% Commitment can clear only after the direct route remains safely clear for
-% several consecutive updates and the old pole is behind the planned motion.
-params.mpc.detourClearDistance = ...
-    params.singularity.warningDistance;
-params.mpc.detourClearConfirmations = 3;
+params.mpc.cemWarmStartStdInflation = 1.25;
+params.mpc.cemNearSingularityStdInflation = 1.50;
+params.mpc.cemTemporalCorrelation = 0.85;
 
-% First proof uses one clearance and three starts:
-% shifted warm start, positive side, and negative side.
-params.mpc.detourClearances = ...
-    params.singularity.warningDistance;  % 10 deg initial ring clearance
+% Prevent premature covariance collapse while still far from the target.
+params.mpc.cemSigmaFloor = deg2rad([0.35; 0.35; 0.35]);
+params.mpc.cemSettlingErrorThreshold = deg2rad(3.0);
 
-% After a side is committed, the working ring may shrink toward 5 degrees
-% as the measured plant approaches the pole. This leaves enough of the
-% six-move control horizon for actual azimuth progress around the pole.
-params.mpc.detourContinuationClearance = max( ...
-    params.mpc.recoveryClearDistance + deg2rad(2), ...
-    deg2rad(5));
+% Preserve broad route exploration.
+params.mpc.cemExplorationFraction = 0.30;
+params.mpc.cemExplorationScale = 1.50;
+params.mpc.cemExplorationStd = deg2rad([1.25; 1.25; 1.25]);
 
-params.mpc.maxDetourStarts = 3;
+% Recover from stalled warm-start distributions.
+params.mpc.cemStagnationUpdates = 8;
+params.mpc.cemStagnationTolerance = deg2rad(0.25);
+params.mpc.cemStagnationDisableBelowError = deg2rad(3.0);
+params.mpc.cemCovarianceResetScale = 2.50;
+params.mpc.cemStagnationMeanDirectBlend = 0.75;
 
-params.mpc.detourTargetTolerance = deg2rad(1);
-params.mpc.detourReferenceChangeTolerance = deg2rad(5);
-params.mpc.maxDetourFailures = 2;
+% Reset the warm start after a meaningful target change.
+params.mpc.cemReferenceResetThreshold = deg2rad(4);
 
-% Geometry resolution and numerical tolerances used only to construct z0.
-params.mpc.detourAxisSampleStep = deg2rad(0.25);
-params.mpc.detourGeometryTolerance = 1e-10;
-params.mpc.detourObjectiveTieTolerance = 1e-6;
+% The Simulink wrapper fills qRefHorizon on every controller update.
+params.mpc.useReferencePreview = true;
 
-% Densify each rotation segment until every raw Euler increment is below
-% this fraction of maxQStep before Nc-point prefix resampling.
-params.mpc.detourDenseQStepFraction = 0.5;
+% -------------------------------------------------------------------------
+% Diagnostics
+% -------------------------------------------------------------------------
+params.mpc.debug = false;
+params.mpc.liveProgress = false;
+params.mpc.enableTestDiagnostics = false;
 
-% During a blocked route, a safe boundary-stall solution is retained only as
-% a backup. Primary route candidates must make at least this much azimuth
-% progress around the selected signed pole.
-params.mpc.detourMinimumOptimizedProgress = deg2rad(0.5);
+params.stage = ...
+    "Stable SO(3) CEM v2.2 MPC plus PID/plant and mesh-contact model";
 
-
-% V5 route execution uses physical tangent-plane displacement, not azimuth.
-% A detour can only claim tangential progress while the predicted tracked
-% axis remains at least this far from the selected pole.
-params.mpc.detourProgressMinimumClearance = ...
-    params.mpc.detourContinuationClearance;  % 5 deg
-
-% Check the first applied command and the third predicted plant step.
-params.mpc.detourNearTermCommandCount = 3;
-
-% Physical tracked-axis displacement requirements in the pole tangent plane.
-% These are deliberately smaller than the old azimuth thresholds because the
-% physical displacement includes the detour-ring radius.
-params.mpc.detourFirstTangentialDisplacement = deg2rad(0.02);
-params.mpc.detourNearTermTangentialDisplacement = deg2rad(0.08);
-
-% If the plant is already inside the progress-clearance ring, require monotonic
-% outward motion before tangential progress can qualify.
-params.mpc.detourMinimumOutwardProgress = deg2rad(0.25);
-
-% Sample each actually applied plant transition so a command cannot jump from
-% one safe endpoint to another by crossing through a singular pole.
-params.mpc.transitionSafetySamples = 9;
-
-% Select the free twist about each geometric tracked-axis sample so the IK
-% branch changes continuously. These settings affect initial guesses only.
-params.mpc.detourTwistCoarseCount = 37;
-params.mpc.detourTwistFineCount = 21;
-params.mpc.detourTwistQWeight = 0.05;
-params.mpc.detourTwistAngleWeight = 1e-5;
-
-% If a geometric start violates motor dynamics, blend it toward the shifted
-% warm start while preserving the requested detour side and all pole limits.
-params.mpc.detourSeedBlendScales = ...
-    [1.00; 0.75; 0.50; 0.35; 0.20; 0.10];
-params.mpc.detourMinimumSeedSideProgress = deg2rad(0.5);
-params.mpc.allowInfeasibleDetourSeed = true;
-
-% -----------------------------
-% Candidate detour size
-% Used by the sampling-based MPC to generate pitch/yaw detour paths.
-% -----------------------------
-params.mpc.avoidOffset = deg2rad(8);
-
+% =========================================================================
+% MESH-CONTACT STRUCT USED BY THE CURRENT SIMULINK MODEL
+% =========================================================================
 
 % new struct
 
